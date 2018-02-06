@@ -1,0 +1,7 @@
+*.swp
+build/*
+test/build/*
+.DS_Store
+bazel-*
+*.pyc
+__pycache__/*

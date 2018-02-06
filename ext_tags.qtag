@@ -1,0 +1,8 @@
+tag c:@F@printf non_reentrant
+tag c:@F@fprintf non_reentrant
+tag c:@F@malloc non_reentrant
+tag c:@F@free non_reentrant
+
+rule restrict_indirect_call preemptive non_reentrant
+rule restrict_indirect_call nonblocking blocking
+rule require_call realtime realtime

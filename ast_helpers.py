@@ -2,18 +2,18 @@ import clang.cindex
 from clang.cindex import CursorKind
 from collections import defaultdict 
 
-def dump_ast( node, depth=0 ):
+def dump_ast( node, output_func, depth=0 ):
     """
     dump the ast for easy human consumption
     """
     indent = " " * depth
-    print( "%s%s: %s" % ( indent, str( node.kind ), str( node.displayname ) ) )
+    output_func( "%s%s: %s" % ( indent, str( node.kind ), str( node.displayname ) ) )
 
     if depth == 8 and node.kind == CursorKind.COMPOUND_STMT:
         pass
 
     for child in node.get_children():
-        dump_ast( child, depth + 2 )
+        dump_ast( child, output_func, depth + 2 )
 
 def get_human_name( node ):
     """

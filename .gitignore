@@ -6,3 +6,4 @@ bazel-*
 *.pyc
 __pycache__/*
 *.gch
+dbg_output

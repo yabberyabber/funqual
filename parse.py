@@ -1,14 +1,15 @@
 import sys
 import clang.cindex
 from clang.cindex import CursorKind
+import logging
 import pdb
-import pprint
+from pprint import pprint, pformat
 from collections import defaultdict
 from optparse import OptionParser
 from rules import RuleRestrictIndirectCall, RuleRequireCall, parse_rules_file
 from ast_helpers import dump_ast, get_qualifiers
 
-pp = pprint.PrettyPrinter()
+logging.basicConfig( filename="dbg_output", filemode="w", level=logging.DEBUG )
 
 "A mapping of function-name to its qualifiers"
 func_tags = defaultdict(lambda: set())
@@ -22,13 +23,10 @@ rules = []
 def main( filename, tagsfile ):
     index = clang.cindex.Index.create()
     tu = index.parse( filename )
-    print( "Translation unit: ", tu.spelling )
-    dump_ast( tu.cursor)
-    print()
+    logging.info( "Translation unit: " + str( tu.spelling ) )
+    dump_ast( tu.cursor, lambda x: logging.debug(x) )
     grab_funcs( tu.cursor )
-    print()
     build_call_tree( tu.cursor, tu )
-    print()
 
     rules = []
     if tagsfile.tags_file:
@@ -37,13 +35,13 @@ def main( filename, tagsfile ):
         for func, tagset in external_tags.items():
             func_tags[ func ].update( tagset )
 
-    pp.pprint( func_tags )
-    pp.pprint( call_tree )
+    logging.info( pformat( func_tags ) )
+    logging.info( pformat( call_tree ) )
 
     for rule in rules:
         for violation in rule.check( call_tree, func_tags, func_cursors ):
-            print()
             print( violation.render_string( func_cursors ) )
+            print()
 
 def grab_funcs( node ):
     """
@@ -54,10 +52,10 @@ def grab_funcs( node ):
         full_name = node.get_usr()
         qualifiers = get_qualifiers( node )
 
-        print( "Found %s [line=%s, col=%s of %s] -> %s" %
-               ( node.get_usr(), node.location.line,
-                 node.location.column, node.location.file,
-                 str( get_qualifiers( node ) ) ) )
+        logging.info( "Found %s [line=%s, col=%s of %s] -> %s" %
+                      ( node.get_usr(), node.location.line,
+                        node.location.column, node.location.file,
+                        str( get_qualifiers( node ) ) ) )
 
         if full_name not in func_tags:
             func_tags[ full_name ] = qualifiers
@@ -77,9 +75,9 @@ def build_call_tree( node, caller ):
         caller = node
 
     if ( node.kind == CursorKind.CALL_EXPR ):
-        print( "Function %s called from %s" %
-               ( node.referenced.get_usr(),
-                 caller.get_usr() ) )
+        logging.debug( "Function %s called from %s" %
+                       ( node.referenced.get_usr(),
+                         caller.get_usr() ) )
         call_tree[ caller.get_usr() ].add( node.referenced.get_usr() )
 
     for c in node.get_children():

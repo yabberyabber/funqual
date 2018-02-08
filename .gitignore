@@ -5,3 +5,4 @@ test/build/*
 bazel-*
 *.pyc
 __pycache__/*
+*.gch

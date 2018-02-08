@@ -18,28 +18,28 @@ You should see output similar to the following:
 Rule violation: `non_reentrant` function indirectly called from `preemptive` context
         Path:   example/header.hpp::foo() (41,6)
         -calls: example/header.hpp::call_printf() (32,6)
-        -calls: example/header.hpp::::printf(const char *__restrict, ...) (362,12)
+        -calls: example/header.hpp::(#include)::printf(const char *__restrict, ...) (362,12)
 
 Rule violation: `non_reentrant` function indirectly called from `preemptive` context
         Path:   example/header.hpp::foo() (41,6)
         -calls: example/header.hpp::do_something_that_calls_printf() (36,6)
         -calls: example/header.hpp::call_printf() (32,6)
-        -calls: example/header.hpp::::printf(const char *__restrict, ...) (362,12)
+        -calls: example/header.hpp::(#include)::printf(const char *__restrict, ...) (362,12)
 
 Rule violation: `non_reentrant` function indirectly called from `preemptive` context
         Path:   example/header.hpp::foo() (41,6)
         -calls: example/header.hpp::do_something_that_calls_printf() (36,6)
-        -calls: example/header.hpp::::printf(const char *__restrict, ...) (362,12)
+        -calls: example/header.hpp::(#include)::printf(const char *__restrict, ...) (362,12)
 
 Rule violation: `non_reentrant` function indirectly called from `preemptive` context
         Path:   example/header.hpp::foo() (41,6)
-        -calls: example/header.hpp::::printf(const char *__restrict, ...) (362,12)
+        -calls: example/header.hpp::(#include)::printf(const char *__restrict, ...) (362,12)
 
 Rule violation: `non_reentrant` function indirectly called from `preemptive` context
         Path:   example/header.hpp::Wowza::UpsideDown() (11,10)
-        -calls: example/header.hpp::::printf(const char *__restrict, ...) (362,12)
+        -calls: example/header.hpp::(#include)::printf(const char *__restrict, ...) (362,12)
 
 Rule violation: `realtime` function calls a function that is not `realtime`
         Path:   example/header.hpp::Wowza::UpsideDown() (11,10)
-        -calls: example/header.hpp::::printf(const char *__restrict, ...) (362,12)
+        -calls: example/header.hpp::(#include)::printf(const char *__restrict, ...) (362,12)
 ```

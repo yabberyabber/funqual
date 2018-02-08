@@ -20,6 +20,8 @@ def get_human_name( node ):
     Given a declaration, find its fully qualified name (with class and
     namespaces and compilation unit) and make it human readable
     """
+    node = node.referenced
+
     res = "{0} ({1},{2})".format(
             node.displayname,
             node.location.line,
@@ -27,7 +29,11 @@ def get_human_name( node ):
 
     node = node.semantic_parent
     while node:
-        res = str(node.displayname) + "::" + res
+        if node.kind == CursorKind.UNEXPOSED_DECL:
+            res = "(#include)" + "::" + res
+        else:
+            res = str(node.displayname) + "::" + res
+
         node = node.semantic_parent
 
     return res

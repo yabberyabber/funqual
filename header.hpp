@@ -29,6 +29,17 @@ void doSomething() FUNQUAL_TAG(blocking) {
     getTime("");
 }
 
+void call_printf() {
+    printf("This call was a sneaky sneaky beast!");
+}
+
+void do_something_that_calls_printf() {
+    call_printf();
+    printf("");
+}
+
 void foo() FUNQUAL_TAG(preemptive) {
-    printf("bar!");
+    call_printf();
+    printf("");
+    do_something_that_calls_printf();
 }

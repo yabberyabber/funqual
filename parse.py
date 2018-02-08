@@ -42,6 +42,7 @@ def main( filename, tagsfile ):
 
     for rule in rules:
         for violation in rule.check( call_tree, func_tags, func_cursors ):
+            print()
             print( violation.render_string( func_cursors ) )
 
 def grab_funcs( node ):

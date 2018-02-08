@@ -20,11 +20,16 @@ def get_human_name( node ):
     Given a declaration, find its fully qualified name (with class and
     namespaces and compilation unit) and make it human readable
     """
-    res = str(node.displayname)
+    res = "{0} ({1},{2})".format(
+            node.displayname,
+            node.location.line,
+            node.location.column )
+
     node = node.semantic_parent
     while node:
         res = str(node.displayname) + "::" + res
         node = node.semantic_parent
+
     return res
 
 def get_qualifiers( node ):

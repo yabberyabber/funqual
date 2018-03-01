@@ -1,3 +1,3 @@
 main.pdf: main.tex bibliography.bib IEEEannot.bst
-	latexmk
+	-latexmk
 	dvipdfm main.dvi

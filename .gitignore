@@ -7,3 +7,12 @@ bazel-*
 __pycache__/*
 *.gch
 dbg_output
+*.aux
+*.dvi
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.t
+*.toc
+*.bbl

@@ -1,0 +1,160 @@
+@online{dismissing_garbage,
+	author = "Chenyang Wu and Min Ni",
+    title = "Dismissing Python Garbage Collection at Instagram",
+    publisher = "Instagram Engineering",
+    DOI = "https://engineering.instagram.com/dismissing-python-garbage-collection-at-instagram-4dca40b29172",
+    annote = {A team at Instagram Engineering discovered that they can reduce the memory usage of their web tier servers (running Django on CPython) by disabling garbage collection.},
+    month = "January",
+    day = 17,
+    year = 2017,
+}
+
+@online{fixing_garbage,
+	DOI = "https://engineering.instagram.com/copy-on-write-friendly-python-garbage-collection-ad6ed5233ddf",
+    title = "Copy-on-write friendly Python garbage collection",
+    author = "Zekun Li",
+    month = "December",
+    day = 20,
+    year = 2017,
+    annote = {A team at Instagram edit CPython's mark-and-sweep garbage collector so that it disturbs less memory during garbage collection in order to improve shared memory},
+}
+
+@article{cache_conscious_copy,
+	DOI = "https://dl.acm.org/citation.cfm?id=286865",
+    title = "Using Generational garbage collection to implement cache-conscious data placement",
+    author = "Trishul M. Chilimbi and James R. Larus",
+    month = "March",
+    year = 1999,
+    journal = "ACM Sigplan",
+    volume = 34,
+    issue = 3,
+    annote = {A group modifies a copying generational garbage collector to monitor object reference frequency.  On copy, the garbage collector co-locates frequently used objects.  This reduces cache miss rate significantly.  Copying generational garbage collector outperforms traditional mark and sweep in cache performance.  },
+}
+
+@article{bookmark_collector,
+	DOI = "https://dl.acm.org/citation.cfm?id=1065028",
+    title = "Garbage Collection without Paging",
+    author = "Matthew Hertz and Yi Feng and Emery D. Berger",
+    month = "June",
+    year = 2005,
+    journal = "ACM Sigplan",
+    volume = 40,
+    issue = 6,
+    annote = {A group modifies a mark-and-sweep garbage collector to compactly store all the in- and out- going references in a page of objects when it is swapped out of memory.  This prevents memory from needing to be swapped in just to scan during a major garbage collection event.  },
+}
+
+@online{incremental_ruby,
+	DOI = "http://www.atdot.net/~ko1/activities/2014_rubyconf_pub.pdf",
+    title = "Incremental GC for Ruby interpretor",
+    author = "Koichi Sasada",
+    publisher = "Heroku",
+    institution = "RubyConf",
+    year = 2014,
+    annote = {Presentation at RubyConf2014 with very detailed description of Ruby's garbage collector and what changes they made to improve the performance in ruby's mark-and-sweep style garbage collector},
+}
+
+@article{scaling_hardware_up,
+	DOI = "https://dl.acm.org/citation.cfm?id=1323562",
+    title = "Performance scalability of a multi-core web server",
+    author = "Bryan Veal and Annie Foong",
+    journal = "ACM/IEEE Symposium on Architecture for networking and communications systems",
+    month = "December",
+    year = 2007,
+    annote = {Analysis of what system resources are the bottleneck in high-load web-servers.  This document found that one of the biggest bottlenecks is on the address bus.  Memory in cache was very quick to access, but anything in main memory needed to be fetched and awaited.  }
+}
+
+@article{mas_vs_sac,
+	DOI = "https://dl.acm.org/citation.cfm?id=91597",
+    title = "Comparing Mark-and-sweep and Stop-and-copy Garbage Collection",
+    author = "Benjamin Zorn",
+    journal = "ACM Conference on LISP and functional programming",
+    year = 1990,
+    annote = {In depth comparison of Mark and Sweep vs Generational garbage collection.  The paper found that mark-and-sweep has slightly higher cpu overhead but that generational garbage collectors require slightly less memory.  This paper didn't reference the problem of memory fragmentation that occurs with a mark-and-sweep garbage collector.  },
+}
+
+@article{NUMA_gc,
+	DOI = "https://dl.acm.org/citation.cfm?id=1988929",
+    title = "Garbage Collection for multicore NUMA machines",
+    author = "Sven Auhagan and Lars Bergstrom and Matthew Fluet and John Reppy",
+    journal = "ACM Sigplan Workshop on Memory system Performance and Correctness",
+    year = 2011,
+    month = "June",
+    annote = {These folks set forth a goal to write a garbage collector that scales to 48 NUMA cores.  Part of the challenge with NUMA is that inter-processor communication is very expensive so they added a variety of optimizations to a traditional mark-and-sweep garbage collector so that the cores had to interact as little as possible.  Many of these optimizations look like they would strongly benefit Copy on write performance.  }
+}
+
+@incollection{generational_inc_old,
+	DOI = "https://link.springer.com/chapter/10.1007/BFb0017203",
+    title = "Incremental collection of Mature Objects",
+    author = "Richard Hudson and Eliot Moss",
+    publisher = "Springer, Berlin, Heidelberg",
+    vol = 637,
+    annote = {Most generational garbage collectors just do mark and sweep on the oldest generation so as to avoid copying all that memory over again, but this can lead to fragmentation.  This paper demonstrates a semispacial mature generation for a generational garbage collector and explains how to make mature collections incremental.  It guarantees a cap on collection duration by sacrificing completeness.  There is a very interesting analysis section explaining how they reached a good tradeoff between speed and completeness in this garbage collector.  },
+}
+
+@article{train_gc,
+	DOI = "https://link.springer.com/chapter/10.1007/3-540-49538-X_12",
+    title = "Incremental Mature Garbage Collection using the Train algorithm",
+    author = "Jacob Seligmann and Steffen Grarup",
+    publisher = "Springer, Berlin, Heidelberg",
+    institution = "Computer Science Department, Aarhus University, Århus CDenmark",
+    year = 2000,
+    month = "April",
+    annote = {First paper that actually implements the "train" garbage collector.  My understanding is that it's like a generational garbage collector except it chunks up the old generation into many train-carts and copies each object several times through the series.  Seems sub-optimal but there is a lot of buzz around it.  },
+}
+
+@manual{VMM,
+	DOI = "https://pdos.csail.mit.edu/~sbw/links/gorman_book.pdf",
+    title = "Understanding the Linux Virtual Memory Manager",
+    year = 2004,
+    author = "Mel Gorman",
+    publisher = "Prentice Hall",
+    annote = {Reference manual for the 2.5 Linux kernel Virtual Memory Manager.  Kernel 2.5 is pretty old so much of the code is different today but the high level algorithms should have stayed mostly the same.  }
+}
+
+@misc{kernelsource,
+    author = {Linus Torvald et. al.},
+    title = {Linux Kernel},
+    year = {2018},
+    publisher = {GitHub},
+    journal = {GitHub repository},
+    url = {\url{https://github.com/torvalds/linux}},
+    commit = {b3d962605c0f552c72f7a8f62548227700f77ae8},
+}
+
+@article{GC-continuum,
+	author = "Bacon and Cheng and Rajan",
+    title = "A Unified Theory of Garbage Collection",
+    year = 2004,
+    journal = "OOPSLA",
+    institution = "IBM",
+    DOI = "http://www.cs.virginia.edu/~cs415/reading/bacon-garbage.pdf",
+    annote = {Very exhaustive survey of garbage collection that provides a theoretical spectrum in which to place every popular modern garbage collection scheme.  }
+}
+
+@manual{cpython3-doc,
+	title = "The Python3 Standard Library",
+    organization = "The Python Software Foundation",
+    author = "Guido et. al. ",
+    url = "https://docs.python.org/3/library/gc.html",
+}
+
+@manual{pypy-doc,
+	title = "Welcome To PyPy",
+    organization = "Software Freedom Conservancy",
+    url = "http://doc.pypy.org/en/release-2.4.x",
+}
+
+@misc{C2,
+	title = "C2 wiki",
+    url = "http://wiki.c2.com/",
+    annote = {Contains witty quotes about almost every computing topic under the sun},
+}
+
+@misc{pypysource,
+    title = {PyPy Source},
+    year = {2018},
+    publisher = {Bitbucket},
+    journal = {Bitbucket repository},
+    url = {\url{https://bitbucket.org/pypy/pypy/}},
+    commit = {5289cd302dffd51bffe8faa25a44e0410aa5d944},
+}

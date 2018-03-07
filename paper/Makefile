@@ -1,3 +1,4 @@
-main.pdf: main.tex bibliography.bib IEEEannot.bst
-	-latexmk
-	dvipdfm main.dvi
+main.pdf: FORCE
+	latexmk -pdf -interaction=nonstopmode -f main.tex
+
+FORCE:

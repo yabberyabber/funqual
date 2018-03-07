@@ -1,88 +1,131 @@
-\documentclass{article}
-\usepackage[utf8]{inputenc}
-\usepackage[margin=1in]{geometry} 
+\documentclass[12pt]{ucthesis}
+
+\usepackage{etex}
+\usepackage[morefloats=125]{morefloats}
+\usepackage[hyphens]{url}
+\usepackage{subfig}
+\usepackage{graphicx}
+\usepackage{tabularx}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage[letterpaper]{geometry}
+\usepackage[overload]{textcase}
+\usepackage{color}
+\usepackage[nonumberlist,toc]{glossaries}
+\usepackage{wrapfig}
+\usepackage{longtable}
+\usepackage{morefloats}
+\usepackage{float}
 \usepackage{listings}
+\usepackage{makecell}
+\usepackage{appendix}
+\usepackage[]{algorithm2e}
+\usepackage{titlesec}
+\usepackage[breaklinks=true,hidelinks,pdfusetitle]{hyperref}
+\usepackage{cleveref}
+\usepackage{ifthen}
 
-\pretolerance=10000
+\makeindex
+\makeglossaries
 
-\twocolumn
+% Shrink the size of headers
+\titleformat{\chapter}[display]
+        {\normalfont\normalsize\centering}
+        {\ifthenelse{\equal{\thechapter}{A}}{APPENDICES\\[4.3ex]}{}\chaptertitlename\ \thechapter}
+        {0pt}{\normalsize\uppercase}
+\titlespacing*{\chapter}{0pt}{-20pt}{4.3ex plus .2ex}
+
+
+\titleformat*{\section}{\normalsize\bfseries}
+\titleformat*{\subsection}{\small\bfseries}
+\titleformat*{\subsubsection}{\small\bfseries}
+\titleformat*{\paragraph}{\small\bfseries}
+\titleformat*{\subparagraph}{\small\bfseries}
+
+\bibliographystyle{abbrv}
+
+\setlength{\parindent}{0.25in} \setlength{\parskip}{6pt}
+\geometry{verbose,nohead,tmargin=1in,bmargin=1in,lmargin=1.5in,rmargin=1in}
+\setcounter{tocdepth}{2}
+
+% Different font in captions (single-spaced, bold) ------------
+\newcommand{\captionfonts}{\small\bf\ssp}
+
+\newcommand{\mycaption}[2]{\caption[#1 --- #2]{#1 --- #2}}
+
+\makeatletter  % Allow the use of @ in command names
+\long\def\@makecaption#1#2{%
+  \vskip\abovecaptionskip
+  \sbox\@tempboxa{{\captionfonts #1: #2}}%
+  \ifdim \wd\@tempboxa >\hsize
+    {\captionfonts #1: #2\par}
+  \else
+    \hbox to\hsize{\hfil\box\@tempboxa\hfil}%
+  \fi
+  \vskip\belowcaptionskip}
+\makeatother   % Cancel the effect of \makeatletter
+% ---------------------------------------
+
+% Define Appendix refs
+\crefname{app}{appendix}{appendices}
+\Crefname{app}{Appendix}{Appendices}
+
 \begin{document}
 
-  \begin{titlepage}
-    \title{Funqual - User-Defined, Statically-Checked Call-Tree Constraints in C++}
+% Declarations for Front Matter
+\input{frontmatter}
 
-    \author{Andrew Nelson\\Masters Thesis Draft}
+\maketitle
 
-    \maketitle
+\begin{frontmatter}
 
-    \begin{abstract}
-      In this paper we create a static analysis tool called funqual.  Funqual reads C++17 code "in the wild" and checks that the function call graph rollows a set of rules which can be defined by the user.  We demonstrate that this tool, when used with hand-crafted rules, can catch certain types of errors which commonly occur in the wild.  We claim that this tool can be used in a production setting to catch certain errors in code before that code is even run.  
-    \end{abstract}
-  \end{titlepage}
+% Custom made for Cal Poly (by Mark Barry, modified by Andrew Tsui).
+\copyrightpage
 
-  \newpage
-  \tableofcontents
-  \newpage
+% Custom made for Cal Poly (by Andrew Tsui).
+\committeemembershippage
 
-  \pagenumbering{arabic}
-  %\twocolumn
-  \onecolumn
+\begin{abstract}
+\input{abstract}
+\end{abstract}
 
+\begin{acknowledgements}
+\input{acknowledgements}
+\end{acknowledgements}
 
-  \section{Introduction}
+\tableofcontents
 
-  Writing bug-free software is challenging if not impossible.  In the past 30 years, millions of dollars have been invested in tools that help developers write code that is robust, readable, and correct.  In general these tools fall into two categories:  Dynamic Analysis tools such as gdb, valgrind, and IDA which analyze programs as they are running; and Static Analysis tools such as lint, cppcheck, and GCC.  All these tools have different use cases and can be used in conjunction to write code that is error-free.
+\listoftables
 
-  Languages like C++ and java are well suited for static analysis because type information is readily and epxlicitly available in the source code.  In fact, a lot of static analysis happens during the compilation phase.  This analysis finds and reports bugs like type mismatches, undefinied references, and conflicting definitions.  
+\listoffigures
 
-  The following snippet of code demonstrates this concept:
+% Add CHAPTER into table of contents.
+\addtocontents{toc}{%
+   \noindent CHAPTER
+}
 
-  \begin{lstlisting}
-    int main(void) {
-      int i = 9;
-      char *j = "pandas";
-      return i + j;
-    }
-  \end{lstlisting}
+\end{frontmatter}
 
-  If C somehow did not perform any sort of static analysis, this would be a runtime error (or worse may fail silently at runtime).  GCC, however, checks the types of all operation and operands at build-time in order to build efficient machine code.  When compiled with GCC, the code above gives an error about addition between in and char*.  While innexperienced programmers may find this knack for finding type-errors to be cumbersome, more experienced programmers often learn to love this static checking that comes for free with the language.
+\pagestyle{plain}
 
-  Of course, there are things which are impossible to statically check in C and C++.  For years, various projects have tried to build tools which can statically analyze code to check for memory errors, unit errors, and infinite loops.  Unfortunately, many of these projects require specific language extensions in order for there to be enough information in the source code for the tools to work.  This is unfortunate because it prevents the tools from being used on code "in the wild", or code that has not been written with the tool in mind.
+\renewcommand{\baselinestretch}{1.66}
 
-  In this paper, we create a tool called funqual which can statically check the call-tree of C++ code "in the wile" for certain patterns and report back to the user.  The program uses libclang to parse C++17 code and build a call-graph for the entire program.  The program then checks this call-graph against user-defined rules which encode.
+\input{chapter-outline}
 
-  \section{Background}
+\nocite{*}
+\bibliography{bibliography}
 
-  \subsection{Type Qualifiers on Variables}
+% Indents Appendix in Table of Contents
+\makeatletter
+\addtocontents{toc}{\let\protect\l@chapter\protect\l@section}
+\makeatother
 
-  In traditional research into type-systems, Type Qualifiers are a way to refine types in order to introduce additional constraints.  These type qualifiers can generally be applied to any base type and can often be combined to form even more specific types.  A classic example that most programmers of C-family languages will know is the $const$ type qualifier.  Any identifier with the $const$ qualifier can be initialized with a value but can never be assigned to again.  This restriction can be statically typed and can often help prevent certain types of errors when used intelligently by the programmer \cite{theory-of-qual}.  Another type qualifier which may be familiar to C programmers is $volatile$ which tells the compiler (and programmer) that this variable may be changed suddenly by other execution environments \cite{theory-of-qual}.
-
-  Some compilers also have their own compiler-specific type qualifiers.  In Microsoft Visual C++, function parameters that are modified by the caller and referenced by the callee can be annoted with the $[Runtime::InteropServices::Out]$ qualifier to tell the programmer and the compiler that this is an out parameter.  Having a programming environment rich in these type refining qualifiers can help make the intent of source code easier for the programmer to infer and make it possible for those intents to be statically checked by the compiler.  
-
-  \section{Related work}
-  
-  The past few decades have seen a huge surge of research into type systems.  Where much of the original research has been in making type systems which make it easier for the compiler to produce efficient machine code, recent research has focused on making type systems which are intuitive and helpful to the human code author.  Much of this research focuses on refining the types of variables used in expressions.  This paper instead focuses on the types of functions and the context from which they are called.  This section explores some of the expression-based type system refinements and contextualizes them with respect to this research.
-
-  \subsection{jQual}
-
-  jQual is a research project aimed at providing a system of user-defined type qualifiers to the java programming language.  The intent is to allow the user to define their own qualifiers that can refine types and that can be checked statically \cite{jqual-inference, jqual-qualify}.  Much of the focus on this work is in type inference.  All type qualifiers are constraints on the types of constants and variables.  jQual has no concept of a function type qualifier other than the qualifiers of parameters and return types.  
-
-  Related to the jQual project, cQual is a project aimed at providing a system of user-defined type qualifiers to the C programming language.  The initial contribution was a program that could analyze program source and determine where additional consts may fit \cite{theory-of-qual}.  Much of the theoretical background for subtyping and supertyping in this paper comes directly from this work.  However, no reference is made to the possible typing of functions.  
-
-  \section{Design}
-
-  \section{Implementation}
-
-  \section{Methodologies}
-
-  \section{Analysis}
-
-  \section{Future Work}
-
-  \newpage
-
-  \onecolumn
-  \bibliographystyle{IEEEannot}
-  \bibliography{bibliography.bib}
+% Hack to make Appendices to appear in Table of Contents
+\addtocontents{toc}{%
+   \noindent APPENDICES
+}
+\begin{appendices}
+\input{appendix-outline}
+\end{appendices}
 
 \end{document}

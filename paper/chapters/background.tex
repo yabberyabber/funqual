@@ -1,0 +1,9 @@
+\chapter{Background}
+
+\section{Type Qualifiers on Variables}
+
+In traditional research into type-systems, Type Qualifiers are a way to refine types in order to introduce additional constraints.  These type qualifiers can generally be applied to any base type and can often be combined to form even more specific types.  A classic example that most programmers of C-family languages will know is the $const$ type qualifier.  Any identifier with the $const$ qualifier can be initialized with a value but can never be assigned to again.  This restriction can be statically typed and can often help prevent certain types of errors when used intelligently by the programmer \cite{theory-of-qual}.  Another type qualifier which may be familiar to C programmers is $volatile$ which tells the compiler (and programmer) that this variable may be changed suddenly by other execution environments \cite{theory-of-qual}.
+
+Some compilers also have their own compiler-specific type qualifiers.  In Microsoft Visual C++, function parameters that are modified by the caller and referenced by the callee can be annotated with the $[Runtime::InteropServices::Out]$ qualifier to tell the programmer and the compiler that this is an out parameter.  Having a programming environment rich in these type refining qualifiers can help make the intent of source code easier for the programmer to infer and make it possible for those intents to be statically checked by the compiler.  
+
+In the majority of these systems, defining additional type qualifiers is either relegated to the language designers, the compiler writers, or the super-user.  There is not much tooling or support for the average programmer to create their own type qualifiers and there does not seem to be any sort of em

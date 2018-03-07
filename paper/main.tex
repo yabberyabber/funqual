@@ -25,7 +25,8 @@
   \newpage
 
   \pagenumbering{arabic}
-  \twocolumn
+  %\twocolumn
+  \onecolumn
 
 
   \section{Introduction}
@@ -52,6 +53,22 @@
 
   \section{Background}
 
+  \subsection{Type Qualifiers on Variables}
+
+  In traditional research into type-systems, Type Qualifiers are a way to refine types in order to introduce additional constraints.  These type qualifiers can generally be applied to any base type and can often be combined to form even more specific types.  A classic example that most programmers of C-family languages will know is the $const$ type qualifier.  Any identifier with the $const$ qualifier can be initialized with a value but can never be assigned to again.  This restriction can be statically typed and can often help prevent certain types of errors when used intelligently by the programmer \cite{theory-of-qual}.  Another type qualifier which may be familiar to C programmers is $volatile$ which tells the compiler (and programmer) that this variable may be changed suddenly by other execution environments \cite{theory-of-qual}.
+
+  Some compilers also have their own compiler-specific type qualifiers.  In Microsoft Visual C++, function parameters that are modified by the caller and referenced by the callee can be annoted with the $[Runtime::InteropServices::Out]$ qualifier to tell the programmer and the compiler that this is an out parameter.  Having a programming environment rich in these type refining qualifiers can help make the intent of source code easier for the programmer to infer and make it possible for those intents to be statically checked by the compiler.  
+
+  \section{Related work}
+  
+  The past few decades have seen a huge surge of research into type systems.  Where much of the original research has been in making type systems which make it easier for the compiler to produce efficient machine code, recent research has focused on making type systems which are intuitive and helpful to the human code author.  Much of this research focuses on refining the types of variables used in expressions.  This paper instead focuses on the types of functions and the context from which they are called.  This section explores some of the expression-based type system refinements and contextualizes them with respect to this research.
+
+  \subsection{jQual}
+
+  jQual is a research project aimed at providing a system of user-defined type qualifiers to the java programming language.  The intent is to allow the user to define their own qualifiers that can refine types and that can be checked statically \cite{jqual-inference, jqual-qualify}.  Much of the focus on this work is in type inference.  All type qualifiers are constraints on the types of constants and variables.  jQual has no concept of a function type qualifier other than the qualifiers of parameters and return types.  
+
+  Related to the jQual project, cQual is a project aimed at providing a system of user-defined type qualifiers to the C programming language.  The initial contribution was a program that could analyze program source and determine where additional consts may fit \cite{theory-of-qual}.  Much of the theoretical background for subtyping and supertyping in this paper comes directly from this work.  However, no reference is made to the possible typing of functions.  
+
   \section{Design}
 
   \section{Implementation}
@@ -61,8 +78,6 @@
   \section{Analysis}
 
   \section{Future Work}
-
-  \section{Related work}
 
   \newpage
 

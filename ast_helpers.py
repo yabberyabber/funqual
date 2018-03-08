@@ -9,9 +9,6 @@ def dump_ast( node, output_func, depth=0 ):
     indent = " " * depth
     output_func( "%s%s: %s" % ( indent, str( node.kind ), str( node.displayname ) ) )
 
-    if depth == 8 and node.kind == CursorKind.COMPOUND_STMT:
-        pass
-
     for child in node.get_children():
         dump_ast( child, output_func, depth + 2 )
 

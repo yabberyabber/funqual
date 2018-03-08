@@ -1,0 +1,3 @@
+tag c:@F@malloc dynamic_memory
+
+rule restrict_indirect_call static_memory dynamic_memory

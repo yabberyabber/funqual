@@ -1,8 +1,8 @@
 \chapter{Introduction}
 
-Writing bug-free software is challenging if not impossible.  In the past 30 years, millions of dollars have been invested in tools that help developers write code that is robust, readable, and correct.  In general these tools fall into two categories:  Dynamic Analysis tools such as gdb, valgrind, and IDA which analyze programs as they are running; and Static Analysis tools such as lint, cppcheck, and GCC.  All these tools have different use cases and can be used in conjunction to write code that is error-free.
+Writing bug-free software is challenging if not impossible.  In the past 30 years, millions of dollars have been invested in tools that help developers write code that is robust, readable, and correct \cite{staticanal}.  In general these tools fall into two categories:  Dynamic Analysis tools such as gdb, valgrind, and IDA which analyze programs as they are running; and Static Analysis tools such as lint, cppcheck, and GCC.  All these tools have different use cases and can be used in conjunction to write code that is error-free.
 
-Languages like C++ and java are well suited for static analysis because type information is readily and epxlicitly available in the source code.  In fact, a lot of static analysis happens during the compilation phase.  This analysis finds and reports bugs like type mismatches, undefinied references, and conflicting definitions.  
+Languages like C++ and java are well suited for static analysis because type information is readily and explicitly available in the source code.  In fact, a lot of static analysis happens during the compilation phase.  This analysis finds and reports bugs like type mismatches, undefined references, and conflicting definitions.  
 
 The following snippet of code demonstrates this concept:
 
@@ -14,7 +14,7 @@ int main(void) {
 }
 \end{lstlisting}
 
-If C somehow did not perform any sort of static analysis, this would be a runtime error (or worse may fail silently at runtime).  GCC, however, checks the types of all operation and operands at build-time in order to build efficient machine code.  When compiled with GCC, the code above gives an error about addition between in and char*.  While innexperienced programmers may find this knack for finding type-errors to be cumbersome, more experienced programmers often learn to love this static checking that comes for free with the language.
+If C somehow did not perform any sort of static analysis, this would be a runtime error (or worse may fail silently at runtime).  GCC, however, checks the types of all operation and operands at build-time in order to build efficient machine code.  When compiled with GCC, the code above gives an error about addition between in and char*.  While inexperienced programmers may find this knack for finding type-errors to be cumbersome, more experienced programmers often learn to love this static checking that comes for free with the language.  A classic study by the univeristy of North Carolina in conjunction with Nortel Networks found that the use of automated static analysis can detect certain types of programming errors at approximately the same accuracy as manual code inspection and that this checking can be performed in a fraction of the time \cite{staticanal}.  
 
 Of course, there are things which are impossible to statically check in C and C++.  For years, various projects have tried to build tools which can statically analyze code to check for memory errors, unit errors, and infinite loops.  Unfortunately, many of these projects require specific language extensions in order for there to be enough information in the source code for the tools to work.  This is unfortunate because it prevents the tools from being used on code "in the wild", or code that has not been written with the tool in mind.
 

@@ -16,3 +16,12 @@ dbg_output
 *.t
 *.toc
 *.bbl
+*.idx
+*.lof
+*.out
+*.glo
+*.log
+*.ist
+*.ind
+*.ilg
+*.lot

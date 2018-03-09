@@ -9,8 +9,9 @@ from pprint import pprint, pformat
 from collections import defaultdict
 from optparse import OptionParser
 from rules import RuleRestrictIndirectCall, RuleRequireCall, parse_rules_file
-from ast_helpers import dump_ast, get_qualifiers
+import ast_helpers
 from call_tree import build_call_tree, merge_call_trees
+import overridescraper
 
 logging.basicConfig( filename="dbg_output", filemode="w", level=logging.DEBUG )
 
@@ -23,18 +24,26 @@ rules = []
 
 def main( files, tagsfile ):
     call_subtrees = []
+    override_subtrees = []
     for fname in files:
-        print( fname )
-        index = clang.cindex.Index.create()
-        tu = index.parse( fname )
+        tu = ast_helpers.get_translation_unit( fname )
+
         logging.info( "Translation unit: " + str( tu.spelling ) )
-        dump_ast( tu.cursor, lambda x: logging.debug(x) )
+        #ast_helpers.dump_ast( tu.cursor, lambda x: logging.debug(x) )
+        #ast_helpers.dump_ast( tu.cursor, lambda x: print( x ) )
         grab_funcs( tu.cursor )
         call_subtrees.append( build_call_tree( tu ) )
+        override_subtrees.append( overridescraper.get_overrides( tu ) )
 
+    #ast_helpers.dump_ast( tu.cursor, lambda x: print( x ) )
     call_tree = merge_call_trees( call_subtrees )
+    overrides = overridescraper.merge( override_subtrees )
+
+    call_tree.augment_with_overrides( overrides )
 
     pprint( call_tree.tree )
+
+    pprint( func_tags )
 
     rules = []
     if tagsfile.tags_file:
@@ -58,19 +67,14 @@ def grab_funcs( node ):
     if ( node.kind == CursorKind.FUNCTION_DECL or
          node.kind == CursorKind.CXX_METHOD ):
         full_name = node.get_usr()
-        qualifiers = get_qualifiers( node )
+        qualifiers = ast_helpers.get_qualifiers( node )
 
         logging.info( "Found %s [line=%s, col=%s of %s] -> %s" %
                       ( node.get_usr(), node.location.line,
                         node.location.column, node.location.file,
-                        str( get_qualifiers( node ) ) ) )
+                        str( ast_helpers.get_qualifiers( node ) ) ) )
 
-        if full_name not in func_tags:
-            func_tags[ full_name ] = qualifiers
-
-        if func_tags[ full_name ] != qualifiers:
-            print( "ERROR: MULTIPLE CONFLICTING DEFINITIONS OF %s" %
-                   ( full_name ) )
+        func_tags[ full_name ] |= qualifiers
 
         func_cursors[ full_name ] = node.canonical
 

@@ -1,6 +1,18 @@
 import clang.cindex
-from clang.cindex import CursorKind
+from clang.cindex import CursorKind, TranslationUnit
 from collections import defaultdict 
+import pdb
+
+def get_translation_unit( fname ):
+    index = clang.cindex.Index.create()
+    options = TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD
+    tu = index.parse( fname, options=options, args=[ '-x',  'c++', '-std=c++17', ] )
+
+    for diag in tu.diagnostics:
+        print( diag )
+
+    return tu
+
 
 def dump_ast( node, output_func, depth=0 ):
     """
@@ -8,6 +20,10 @@ def dump_ast( node, output_func, depth=0 ):
     """
     indent = " " * depth
     output_func( "%s%s: %s" % ( indent, str( node.kind ), str( node.displayname ) ) )
+
+    if node.displayname == 'stop_hunting(int)':
+        #pdb.set_trace()
+        pass
 
     for child in node.get_children():
         dump_ast( child, output_func, depth + 2 )
@@ -38,11 +54,15 @@ def get_human_name( node ):
 def get_qualifiers( node ):
     """
     Given a declaration, return all its qualifiers
+    This includes quaifiers on overridden cursors.
     """
     res = set()
     for child in node.get_children():
         if child.kind == CursorKind.ANNOTATE_ATTR:
             if child.displayname.startswith("funqual::"):
                 res.add(child.displayname[9:])
-    return res
 
+    for overridden_cursor in node.get_overridden_cursors():
+        res |= get_qualifiers( overridden_cursor )
+
+    return res

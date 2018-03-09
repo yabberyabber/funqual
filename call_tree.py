@@ -22,6 +22,15 @@ class CallTree():
     def calls( self, caller ):
         return self.tree[ caller ]
 
+    def augment_with_overrides( self, overrides ):
+        """
+        Mutate |call_tree| such that calls to a parent method also imply
+        a call to the child method
+        """
+        for func in self.functions():
+            for callee in list( self.calls( func ) ):
+                self.addAll( func, overrides[ callee ] )
+
 def merge_call_trees( subtrees ):
     """
     Union two call trees into a single merged call tree

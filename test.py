@@ -4,7 +4,7 @@ import unittest
 import parse
 from pprint import pprint
 import ast_helpers
-import overridescraper
+import override_scraper
 from call_tree import build_call_tree
 
 class TestCallGraph( unittest.TestCase ):
@@ -56,6 +56,7 @@ class TestCallGraph( unittest.TestCase ):
                 'c:@F@printf',
             ] ),
             'c:@S@RedPanda@F@Feed#I#': set( [
+                'c:@F@malloc',
                 'c:@F@printf',
             ] ),
         }
@@ -89,14 +90,34 @@ class TestOverrides( unittest.TestCase ):
         self.assertEqual( dict( overrides ), {
             'c:@S@Panda@F@Feed#I#': set( [ 'c:@S@RedPanda@F@Feed#I#' ] ),
         } )
+
+    def test_multilevel_inheritance_override( self ):
+        overrides = get_overrides(
+                'test_cases/3/main.cpp', 'test_cases/3/Panda.cpp',
+                'test_cases/3/DomesticRedPanda.cpp',
+                'test_cases/3/RedPanda.cpp',
+                'test_cases/3/TrashPanda.cpp', )
+
+        self.assertEqual( overrides[ 'c:@S@Panda@F@Feed#I#' ],
+                          set( [
+                              'c:@S@DomesticRedPanda@F@Feed#I#',
+                              'c:@S@RedPanda@F@Feed#I#',
+                              'c:@S@TrashPanda@F@Feed#I#',
+                          ] ) )
         
-def get_overrides( sourcefile ):
+def get_overrides( *sourcefiles ):
     """
     Open the given source file, parse it and determine the overrides map
     """
-    tu = ast_helpers.get_translation_unit( sourcefile )
-    overrides = overridescraper.get_overrides( tu )
-    return overrides
+    overrides = [
+        override_scraper.get_overrides(
+            ast_helpers.get_translation_unit(
+                sourcefile ) )
+        for sourcefile
+        in sourcefiles
+    ]
+
+    return override_scraper.merge( overrides )
 
 
 if __name__ == '__main__':

@@ -11,7 +11,7 @@ from optparse import OptionParser
 from rules import RuleRestrictIndirectCall, RuleRequireCall, parse_rules_file
 import ast_helpers
 from call_tree import build_call_tree, merge_call_trees
-import overridescraper
+import override_scraper
 
 logging.basicConfig( filename="dbg_output", filemode="w", level=logging.DEBUG )
 
@@ -33,17 +33,18 @@ def main( files, tagsfile ):
         #ast_helpers.dump_ast( tu.cursor, lambda x: print( x ) )
         grab_funcs( tu.cursor )
         call_subtrees.append( build_call_tree( tu ) )
-        override_subtrees.append( overridescraper.get_overrides( tu ) )
+        override_subtrees.append( override_scraper.get_overrides( tu ) )
 
     #ast_helpers.dump_ast( tu.cursor, lambda x: print( x ) )
     call_tree = merge_call_trees( call_subtrees )
-    overrides = overridescraper.merge( override_subtrees )
+    overrides = override_scraper.merge( override_subtrees )
 
     call_tree.augment_with_overrides( overrides )
+    pprint( overrides )
 
     pprint( call_tree.tree )
 
-    pprint( func_tags )
+    #pprint( func_tags )
 
     rules = []
     if tagsfile.tags_file:

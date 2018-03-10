@@ -64,8 +64,11 @@ def _rec_build_call_tree( node, caller, call_tree ):
     Build a call tree by recursively visiting all the nodes in a given
     context.  This function mutates |call_tree| in place.
     """
-    if ( node.kind == CursorKind.FUNCTION_DECL or
-         node.kind == CursorKind.CXX_METHOD ):
+    if ( node.kind in [
+            CursorKind.FUNCTION_DECL,
+            CursorKind.CXX_METHOD,
+            CursorKind.CONSTRUCTOR,
+            CursorKind.DESTRUCTOR ] ):
         caller = node
     elif ( node.kind == CursorKind.CALL_EXPR ):
         if node.referenced:

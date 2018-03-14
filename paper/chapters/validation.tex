@@ -10,4 +10,41 @@ To solve this problem we need to examine every translation unit in the source tr
 
 \section{Dealing with Inheritance}\label{sec:val:inherit}
 
+According to the Liskov Substution Principal, "if $S$ is a subtype of $T$, then objects of type $T$ in a program may be replaced with objects of type $S$ without altering any of the desirable properties of that program".  In this work, we assume this to be a basic principal of object oriented design and build off it.  For the purpose of this paper, "if $S$ is a subtype of $T$ and $M$ is a method of $S$, then calls to $T.M$ in a program may be replaced with objects of $S.M$ without altering any of the desirable properties of that program".  As a result of this, when typechecking a call to $T.M$, we must also typecheck a call to $S.M$ to ensure that substituting $S$ for $M$ does not violate our call tree constraints.
 
+In practice, this mean that for any method call from $C$ to $T.M$ where $C$ is the calling context and $M$ is a method of $T$, we must add an edge in our call graph from $C$ to $T.M$ and also from $C$ to $S.M$ for any $S$ that is a direct or indirect subtype of $T$.  
+
+Below is a code example that demonstrates this rule in use:
+
+\begin{minipage}[c]{0.95\textwidth}
+\begin{lstlisting}[language=C++]
+void *malloc(size_t size) FUNQUAL(dynamic_memory);
+
+class Panda {
+protected:
+    int m_hunger;
+public:
+    int Feed() {
+        m_hunger--;
+    }
+};
+
+class RedPanda : public Panda{
+public:
+    int Feed() {
+        char *buff = malloc(30);
+        m_hunger--;
+    }
+};
+
+void feedPanda(Panda *panda) FUNQUAL(static_memory) {
+    panda->Feed();
+}
+
+int main(void) {
+    feedPanda(new RedPanda());
+}
+\end{lstlisting}
+\end{minipage}
+
+This example shows a function called feedPanda which calls $Panda.Feed$.  This function also shows that $malloc$ is tagged with $dynamic\_memory$ and that $feedPanda$ is tagged with $static\_memory$.  Presumably there is a indirect call restriction that prevents functions tagged with static\_memory from calling (either directly or indirectly) functions tagged with dynamic\_memory.  It we simply looked at the type of $panda$, we would falsely believe that this program is typesafe.  However, we see that it's possible for the actual type of $panda$ to be $RedPanda$ in which case we call $RedPanda::Feed$ which calls $malloc$ which violates our static memory constraint.  To solve this problem, we mus tcreate a call graph which contains edges pointing to both $Panda::Feed$ and $RedPanda::Feed$.

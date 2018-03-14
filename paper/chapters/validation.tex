@@ -56,3 +56,25 @@ This example shows a function called feedPanda which calls $Panda.Feed$.  This f
 Just like functions, function pointers need to have their place in the call graph.  Function pointers are difficult because we can't always know at build-time what they refer to.  With a standard function, we can simply build a mapping that goes from the function to its body.  With function pointers, we have to be able to accommodate for the pointer referencing different functions at different times.
 
 To solve this problem, we allude to the existing type system on function pointers.  According to the C++ standard, in order to assign a function pointer to reference an existing function, the type of the function pointer must match the type of the function being referenced.  We continue this trend by forcing the type qualifiers of the function pointer to match the type qualifiers of the function being referenced.  These type qualifiers can, of course, be forcibly removed by a cast in extreme circumstances, but we believe that this rule ensure consistency between within the call tree in the face of function pointers.
+
+\section{Checking the Call Graph}
+
+This section contains explanation and motivation behind the call graph rules implemented in this tool.
+
+\subsection{Restrict Direct Call}
+
+\begin{center}
+    $restrict(X, Y) = ( V \in X \implies Y \in A ) \mid (V, A) \in G$
+\end{center}
+
+A restrict direct call requires that functions in set $X$ only ever call function sin set $Y$.  This constraint can be checked in time that is linear with the number of function calls in the program and can be reported very easily.  An example use case for this type of restriction might be to restrict realtime functions to only calling other realtime functions.
+
+\subsection{Restrict Indirect Call}
+
+\begin{center}
+    $restrict(X, Y) = $
+\end{center}
+
+\subsection{Call Tree Length}
+
+In cirtain circumstances (especially in embedded and kernel programming), the stack size is very limited.  It becomes important to statically ensure that the stack size of the program does not exceed a certain number of frames.  To do this, our tool can examine certain functions that are tagged with a stack size restriction and check all out-paths in the codebase to ensure that this function's stack size never exceeds the given number of frames.  This is modeled as a depth first search that bottoms out at a given depth and reports a warning to the user.

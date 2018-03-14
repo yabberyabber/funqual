@@ -1,0 +1,13 @@
+\chapter{Validation}
+
+This chapter examines some of the unique properties that a tool like funqual needs to respect in order to function properly as well as how those properties were tested both in the code and in practice.  
+
+\section{Bridging the Divide between Translation Units}
+
+The compilation of C++ code is driven by translation units.  Translation units are the files which are inputted into the C compiler to be translated into object files.  In general, translation units are singular $.c$ or $.cpp$ files where the preprocessor has already expanded all macros (including $#include$ substitutions).  During this process, many symbols are said to have $external linkage$ meaning that their type is specified in this translation unit but not their value or definition (this is the case with extern variables, function prototypes, and class forward declarations).  In these cases, examining the call tree of a single translation unit is not sufficient to enforcing global call-tree constraints because we would be able to see which internally linked functions call externally linked functions but not vise versa.  
+
+To solve this problem we need to examine every translation unit in the source tree and build a call tree which represents the entire codebase.  In order to test this, we create several test cases where functions are defined in multiple translation units and where function a call tree constraint is violated between translation units.
+
+\section{Dealing with Inheritance}\label{sec:val:inherit}
+
+

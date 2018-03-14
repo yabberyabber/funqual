@@ -2,13 +2,15 @@
 
 This chapter examines some of the unique properties that a tool like funqual needs to respect in order to function properly as well as how those properties were tested both in the code and in practice.  
 
-\section{Bridging the Divide between Translation Units}
+\section{Creating a Call Graph}
+
+\subsection{Bridging the Divide between Translation Units}
 
 The compilation of C++ code is driven by translation units.  Translation units are the files which are inputted into the C compiler to be translated into object files.  In general, translation units are singular $.c$ or $.cpp$ files where the preprocessor has already expanded all macros (including $#include$ substitutions).  During this process, many symbols are said to have $external linkage$ meaning that their type is specified in this translation unit but not their value or definition (this is the case with extern variables, function prototypes, and class forward declarations).  In these cases, examining the call tree of a single translation unit is not sufficient to enforcing global call-tree constraints because we would be able to see which internally linked functions call externally linked functions but not vise versa.  
 
 To solve this problem we need to examine every translation unit in the source tree and build a call tree which represents the entire codebase.  In order to test this, we create several test cases where functions are defined in multiple translation units and where function a call tree constraint is violated between translation units.
 
-\section{Dealing with Inheritance}\label{sec:val:inherit}
+\subsection{Dealing with Inheritance}\label{sec:val:inherit}
 
 According to the Liskov Substution Principal, "if $S$ is a subtype of $T$, then objects of type $T$ in a program may be replaced with objects of type $S$ without altering any of the desirable properties of that program".  In this work, we assume this to be a basic principal of object oriented design and build off it.  For the purpose of this paper, "if $S$ is a subtype of $T$ and $M$ is a method of $S$, then calls to $T.M$ in a program may be replaced with objects of $S.M$ without altering any of the desirable properties of that program".  As a result of this, when typechecking a call to $T.M$, we must also typecheck a call to $S.M$ to ensure that substituting $S$ for $M$ does not violate our call tree constraints.
 
@@ -47,4 +49,10 @@ int main(void) {
 \end{lstlisting}
 \end{minipage}
 
-This example shows a function called feedPanda which calls $Panda.Feed$.  This function also shows that $malloc$ is tagged with $dynamic\_memory$ and that $feedPanda$ is tagged with $static\_memory$.  Presumably there is a indirect call restriction that prevents functions tagged with static\_memory from calling (either directly or indirectly) functions tagged with dynamic\_memory.  It we simply looked at the type of $panda$, we would falsely believe that this program is typesafe.  However, we see that it's possible for the actual type of $panda$ to be $RedPanda$ in which case we call $RedPanda::Feed$ which calls $malloc$ which violates our static memory constraint.  To solve this problem, we mus tcreate a call graph which contains edges pointing to both $Panda::Feed$ and $RedPanda::Feed$.
+This example shows a function called feedPanda which calls $Panda.Feed$.  This function also shows that $malloc$ is tagged with $dynamic\_memory$ and that $feedPanda$ is tagged with $static\_memory$.  Presumably there is a indirect call restriction that prevents functions tagged with static\_memory from calling (either directly or indirectly) functions tagged with dynamic\_memory.  It we simply looked at the type of $panda$, we would falsely believe that this program is typesafe.  However, we see that it's possible for the actual type of $panda$ to be $RedPanda$ in which case we call $RedPanda::Feed$ which calls $malloc$ which violates our static memory constraint.  To solve this problem, we must create a call graph which contains edges pointing to both $Panda::Feed$ and $RedPanda::Feed$.
+
+\subsection{Function Pointers Pointing}
+
+Just like functions, function pointers need to have their place in the call graph.  Function pointers are difficult because we can't always know at build-time what they refer to.  With a standard function, we can simply build a mapping that goes from the function to its body.  With function pointers, we have to be able to accommodate for the pointer referencing different functions at different times.
+
+To solve this problem, we allude to the existing type system on function pointers.  According to the C++ standard, in order to assign a function pointer to reference an existing function, the type of the function pointer must match the type of the function being referenced.  We continue this trend by forcing the type qualifiers of the function pointer to match the type qualifiers of the function being referenced.  These type qualifiers can, of course, be forcibly removed by a cast in extreme circumstances, but we believe that this rule ensure consistency between within the call tree in the face of function pointers.

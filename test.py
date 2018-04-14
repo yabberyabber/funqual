@@ -2,7 +2,7 @@ import clang.cindex
 from clang.cindex import CursorKind, TranslationUnit
 import unittest
 import parse
-from pprint import pprint
+import pprint
 import ast_helpers
 import override_scraper
 from call_tree import build_call_tree
@@ -24,13 +24,11 @@ class TestCallGraph( unittest.TestCase ):
 
         expected_call_tree = {
             'c:@F@save_the_pandas#': set( [
-                'c:@F@increase_environment#',
-                'c:@F@stop_deforestation#',
-                'c:@F@stop_hunting#I#',
+                'c:alt.cpp@F@increase_environment#',
+                'c:alt.cpp@F@stop_deforestation#',
+                'c:alt.cpp@F@stop_hunting#I#',
             ] ),
-            'c:@F@stop_deforestation#': set(),
-            'c:@F@increase_environment#': set(),
-            'c:@F@stop_hunting#I#': set( [
+            'c:alt.cpp@F@stop_hunting#I#': set( [
                 'c:@F@malloc',
                 'c:@F@printf',
             ] ),

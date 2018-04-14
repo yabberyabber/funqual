@@ -31,7 +31,7 @@ public:
     virtual void Feed(int pounds_of_food) override {
         printf("I am a red panda and I ate %d pounds of food :)\n",
                pounds_of_food);
-        malloc( 5 );
+        malloc(5);
     }
 };
 

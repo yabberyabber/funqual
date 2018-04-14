@@ -29,7 +29,7 @@ def main( files, tagsfile ):
         tu = ast_helpers.get_translation_unit( fname )
 
         logging.info( "Translation unit: " + str( tu.spelling ) )
-        #ast_helpers.dump_ast( tu.cursor, lambda x: logging.debug(x) )
+        ast_helpers.dump_ast( tu.cursor, lambda x: logging.debug(x) )
         #ast_helpers.dump_ast( tu.cursor, lambda x: print( x ) )
         grab_funcs( tu.cursor )
         call_subtrees.append( build_call_tree( tu ) )

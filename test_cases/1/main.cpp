@@ -8,4 +8,7 @@ void do_stuff() QTAG(static_memory) {
 
 int main(void) {
     do_stuff();
+
+    int (*foo)();
+    foo = &hunt_a_little_less();
 }

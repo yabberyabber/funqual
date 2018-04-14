@@ -7,6 +7,8 @@
 
 void *malloc(size_t size) QTAG(dynamic_memory);
 
+Panda g_panda(3);
+
 void FeedPanda() {
     Panda *panda = new RedPanda(18);
 
@@ -22,6 +24,9 @@ void FeedRaccoon() {
 int main(void) QTAG(static_memory) {
     FeedPanda();
     FeedRaccoon();
+
+    Panda babyPanda = Panda(4) + Panda(6);
+    babyPanda.Feed(7);
 
     return 0;
 }

@@ -1,4 +1,6 @@
-from clang.cindex import CursorKind
+#!/usr/bin/env python3
+
+from clang.cindex import CursorKind, TranslationUnit
 from collections import defaultdict
 
 class CallTree():
@@ -74,7 +76,20 @@ def _rec_build_call_tree( node, caller, call_tree ):
         if node.referenced:
             func = node.referenced
 
-            call_tree.add( caller.get_usr(), func.get_usr() )
+            if type( caller ) == TranslationUnit:
+                caller_str = '_start'
+            else:
+                caller_str = caller.get_usr()
+
+            call_tree.add( caller_str, func.get_usr() )
 
     for c in node.get_children():
         _rec_build_call_tree( c, caller, call_tree )
+
+if __name__ == '__main__':
+    from ast_helpers import get_translation_unit
+    import sys
+    from pprint import pprint
+
+    pprint( dict( build_call_tree(
+                get_translation_unit( sys.argv[1] ) ).tree ) )

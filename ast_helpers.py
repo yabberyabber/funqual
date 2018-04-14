@@ -1,7 +1,10 @@
+#!/usr/bin/env python3
+
 import clang.cindex
 from clang.cindex import CursorKind, TranslationUnit
 from collections import defaultdict 
 import pdb
+import sys
 
 def get_translation_unit( fname ):
     index = clang.cindex.Index.create()
@@ -20,6 +23,14 @@ def dump_ast( node, output_func, depth=0 ):
     """
     indent = " " * depth
     output_func( "%s%s: %s" % ( indent, str( node.kind ), str( node.displayname ) ) )
+
+    if node.kind == CursorKind.DECL_REF_EXPR:
+        print(node.type.spelling)
+        #pdb.set_trace()
+
+    if node.kind == CursorKind.VAR_DECL:
+        #pdb.set_trace()
+        pass
 
     if node.displayname == 'stop_hunting(int)':
         #pdb.set_trace()
@@ -66,3 +77,6 @@ def get_qualifiers( node ):
         res |= get_qualifiers( overridden_cursor )
 
     return res
+
+if __name__ == '__main__':
+    dump_ast(get_translation_unit(sys.argv[1]).cursor, print)

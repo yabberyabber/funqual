@@ -25,3 +25,4 @@ dbg_output
 *.ind
 *.ilg
 *.lot
+.cache*

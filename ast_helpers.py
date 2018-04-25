@@ -24,12 +24,12 @@ def dump_ast( node, output_func, depth=0 ):
     indent = " " * depth
     output_func( "%s%s: %s" % ( indent, str( node.kind ), str( node.displayname ) ) )
 
-    if node.kind == CursorKind.DECL_REF_EXPR:
+    if node.kind in [CursorKind.DECL_REF_EXPR, CursorKind.VAR_DECL]:
         print(node.type.spelling)
         #pdb.set_trace()
 
-    if node.kind == CursorKind.VAR_DECL:
-        #pdb.set_trace()
+    if node.kind == CursorKind.BINARY_OPERATOR:
+        pdb.set_trace()
         pass
 
     if node.displayname == 'stop_hunting(int)':

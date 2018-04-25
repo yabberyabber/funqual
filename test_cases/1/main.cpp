@@ -10,5 +10,5 @@ int main(void) {
     do_stuff();
 
     int (*foo)();
-    foo = &hunt_a_little_less();
+    foo = hunt_a_little_less;
 }

@@ -1,9 +1,13 @@
 from collections import defaultdict 
 from ast_helpers import get_human_name
+from violation import RuleViolation
+from scrapers import AnnotationKind
+
 
 class Rule( object ):
-    def check( self, call_tree, func_tags, func_cursors ):
+    def check( self, call_tree, func_tags ):
         raise NotImplementedError( "Child class should override this" )
+
 
 class RuleRestrictIndirectCall( Rule ):
     def __init__( self, caller_tag, callee_tag, message="" ):
@@ -20,28 +24,28 @@ class RuleRestrictIndirectCall( Rule ):
                     self.callee_tag,
                     self.caller_tag )
 
-    def check( self, call_tree, func_tags, func_cursors ):
+    def check( self, call_tree, func_tags ):
         caller_funcs = set()
         for caller_func, caller_tags in func_tags.items():
-            if self.caller_tag in caller_tags:
+            if self.caller_tag in direct_type( caller_tags ):
                 caller_funcs.add( caller_func )
 
         for caller_func in caller_funcs:
-            for callee_func in call_tree[ caller_func ]:
+            for callee_func in call_tree.calls( caller_func ):
                 yield from self._check_func( callee_func, call_tree,
-                                             func_tags, func_cursors,
+                                             func_tags,
                                              [ caller_func ] )
 
     def _check_func( self, curr, call_tree, func_tags,
-                     func_cursors, path ):
-        if self.callee_tag in func_tags[ curr ]:
-            yield Violation( self,
-                             path + [ curr ] )
+                     path ):
+        if self.callee_tag in direct_type( func_tags.get( curr, set() ) ):
+            yield RuleViolation( self,
+                                 path + [ curr ] )
 
-        for callee_func in call_tree[ curr ]:
+        for callee_func in call_tree.calls( curr ):
             if callee_func not in path:
                 yield from self._check_func( callee_func, call_tree,
-                                             func_tags, func_cursors,
+                                             func_tags,
                                              path + [ curr ] )
 
 
@@ -64,45 +68,36 @@ class RuleRequireCall( Rule ):
                     self.caller_tag,
                     self.callee_tag )
 
-    def check( self, call_tree, func_tags, func_cursors ):
+    def check( self, call_tree, func_tags ):
         to_check = []
         for func, tags in func_tags.items():
-            if self.caller_tag in tags:
+            if self.caller_tag in direct_type( tags ):
                 to_check.append( func )
 
         for caller_func in to_check:
-            for callee_func in call_tree[ caller_func ]:
-                if self.callee_tag not in func_tags[ callee_func ]:
-                    yield Violation( self,
-                                     [ caller_func, callee_func ] )
-
-class Violation( object ):
-    def __init__( self, rule, call_path ):
-        self.rule = rule
-        self.call_path = call_path
-
-    def render_string( self, func_cursors ):
-        ret = "Rule violation: {0}\n".format( str( self.rule.error_string() ) )
-
-        pretty_path = [ get_human_name( func_cursors[ func_usr ] )
-                        for func_usr
-                        in self.call_path ]
-
-        pretty_path = "\n\t-calls: ".join( pretty_path )
-        ret += "\tPath:   " + pretty_path
-
-        if self.rule.message:
-            ret += "\tRule-specific message: {0}\n".format( self.rule.message )
-        return ret
+            for callee_func in call_tree.calls( caller_func ):
+                if ( self.callee_tag not in
+                     direct_type( func_tags[ callee_func ] ) ):
+                    yield RuleViolation( self,
+                                         [ caller_func, callee_func ] )
 
 
 def idx_or_default( arr, idx, default ):
+    """
+    Like arr.get( idx, default ) except that arr is a list and lists
+    don't have a get attribute
+    """
     try:
         return arr[idx]
     except IndexError:
         return default
 
+
 def parse_rules_file( filename ):
+    """
+    Given a rules file, parse out all the rule definitions and external
+    function taggings
+    """
     tags = defaultdict(lambda: set())
     rules = []
 
@@ -126,3 +121,19 @@ def parse_rules_file( filename ):
                     print( "Could not interpret line: {0}".format( line ) )
 
     return dict( tags ), rules
+
+
+def direct_type( types ):
+    return set( [
+        name
+        for ( kind, name )
+        in types
+        if kind == AnnotationKind.DIRECT ] )
+
+
+def indirect_type( types ):
+    return set( [
+        name
+        for ( kind, name )
+        in types
+        if kind == AnnotationKind.INDIRECT ] )

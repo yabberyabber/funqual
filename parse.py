@@ -57,7 +57,7 @@ def main( files, tagsfile ):
     logging.info( pformat( call_tree.tree ) )
 
     for rule in rules:
-        for violation in rule.check( call_tree.tree, func_tags, func_cursors ):
+        for violation in rule.check( call_tree.tree, func_tags ):
             print( violation.render_string( func_cursors ) )
             print()
 

@@ -50,7 +50,7 @@ def merge_disjoint_dicts( dicts ):
                 raise Exception(
                         "key `{}` defined in two dictionaries".format(
                             key ) )
-            results[ key ] = value
+            result[ key ] = value
 
     return result
 
@@ -251,13 +251,30 @@ class FunPtrAssignments:
 if __name__ == '__main__':
     from pprint import pprint
 
-    target = get_translation_unit( sys.argv[ 2 ] )
+    if len( sys.argv ) == 2:
+        target = get_translation_unit( sys.argv[ 1 ] )
+        do_all = True
+    elif len( sys.argv ) == 3:
+        target = get_translation_unit( sys.argv[ 2 ] )
+        do_all = False
+    else:
+        print( "Usage: {} [ptr|qual|override|assignment] file.cpp".format(
+            sys.argv[ 0 ] ) )
 
-    if sys.argv[ 1 ] == 'ptr':
+
+    if sys.argv[ 1 ] == 'ptr' or do_all:
+        print( "Function pointers:" )
         pprint( FunctionPointers.scrape( target ) )
-    elif sys.argv[ 1 ] == 'qual':
+        print()
+    if sys.argv[ 1 ] == 'qual' or do_all:
+        print( "Functions and Methods:" )
         pprint( FunctionQualifiers.scrape( target ) )
-    elif sys.argv[ 1 ] == 'override':
-        pprint( Overrides.scrape( target ) )
-    elif sys.argv[ 1 ] == 'assignment':
+        print()
+    if sys.argv[ 1 ] == 'override' or do_all:
+        print( "Overrides:" )
+        pprint( dict( Overrides.scrape( target ) ) )
+        print()
+    if sys.argv[ 1 ] == 'assignment' or do_all:
+        print( "Assignments:" )
         pprint( FunPtrAssignments.scrape( target ) )
+        print()

@@ -29,7 +29,7 @@ def dump_ast( node, output_func, depth=0 ):
         #pdb.set_trace()
 
     if node.kind == CursorKind.BINARY_OPERATOR:
-        pdb.set_trace()
+        #pdb.set_trace()
         pass
 
     if node.displayname == 'stop_hunting(int)':

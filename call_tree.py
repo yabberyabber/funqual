@@ -19,7 +19,7 @@ class CallTree():
         self.tree[ caller ] |= callees
 
     def functions( self ):
-        return self.tree.keys()
+        return list( self.tree.keys() )
 
     def calls( self, caller ):
         return self.tree[ caller ]

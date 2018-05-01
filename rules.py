@@ -105,7 +105,8 @@ def parse_rules_file( filename ):
         for line in tagsFile:
             line = line.split( " " )
             if line[ 0 ] == "tag":
-                tags[ line[ 1 ] ].add( line[ 2 ].strip() )
+                tags[ line[ 1 ] ].add(
+                        (AnnotationKind.DIRECT, line[ 2 ].strip() ) )
             elif line[ 0 ] == "rule":
                 if line[ 1 ] == "restrict_indirect_call":
                     rules.append(

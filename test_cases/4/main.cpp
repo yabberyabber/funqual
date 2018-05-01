@@ -13,7 +13,7 @@ int something_that_doesnt_call_printf() {
 }
 
 int main(void) QTAG(no_io) {
-    int QTAG(goopy) QTAG(oopsy) QTAG_IND(io) (*func)() = something_that_doesnt_call_printf, bar;
+    int  QTAG(oopsy) QTAG_IND(io) (*func)() = something_that_doesnt_call_printf, bar;
 
     func = something_that_calls_printf;
 

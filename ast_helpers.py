@@ -25,8 +25,8 @@ def dump_ast( node, output_func, depth=0 ):
     output_func( "%s%s: %s" % ( indent, str( node.kind ), str( node.displayname ) ) )
 
     if node.kind in [CursorKind.DECL_REF_EXPR, CursorKind.VAR_DECL]:
-        print(node.type.spelling)
         #pdb.set_trace()
+        pass
 
     if node.kind == CursorKind.BINARY_OPERATOR:
         #pdb.set_trace()

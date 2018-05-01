@@ -1,86 +1,83 @@
 #!/usr/bin/env python3
 
 import sys
-import clang.cindex
-from clang.cindex import CursorKind
 import logging
 import pdb
+from itertools import chain
 from pprint import pprint, pformat
 from collections import defaultdict
 from optparse import OptionParser
-from rules import RuleRestrictIndirectCall, RuleRequireCall, parse_rules_file
+import rules
+import scrapers
 import ast_helpers
 from call_tree import build_call_tree, merge_call_trees
-import override_scraper
+from type_augmentor import augment_types
+from assignment_checker import check_assignments
+from rule_checker import check_rules
 
 logging.basicConfig( filename="dbg_output", filemode="w", level=logging.DEBUG )
-
-"A mapping of function-name to its qualifiers"
-func_tags = defaultdict(lambda: set())
-"A mapping of function-name to the canonical cursor"
-func_cursors = {}
-
-rules = []
 
 def main( files, tagsfile ):
     call_subtrees = []
     override_subtrees = []
+    cursor_subsets = []
+    func_type_subsets = []
+    funcptr_type_subsets = []
+    assignment_subsets = []
+
     for fname in files:
-        tu = ast_helpers.get_translation_unit( fname )
+        target = ast_helpers.get_translation_unit( fname )
 
-        logging.info( "Translation unit: " + str( tu.spelling ) )
-        ast_helpers.dump_ast( tu.cursor, lambda x: logging.debug(x) )
-        #ast_helpers.dump_ast( tu.cursor, lambda x: print( x ) )
-        grab_funcs( tu.cursor )
-        call_subtrees.append( build_call_tree( tu ) )
-        override_subtrees.append( override_scraper.get_overrides( tu ) )
+        logging.info( "Translation unit: " + str( target.spelling ) )
+        ast_helpers.dump_ast( target.cursor, lambda x: logging.debug(x) )
 
-    #ast_helpers.dump_ast( tu.cursor, lambda x: print( x ) )
-    call_tree = merge_call_trees( call_subtrees )
-    overrides = override_scraper.merge( override_subtrees )
+        call_subtrees.append(
+                build_call_tree( target ) )
+        override_subtrees.append(
+                scrapers.Overrides.scrape( target ) )
+        cursor_subsets.append(
+                scrapers.FunctionCursors.scrape( target ) )
+        func_type_subsets.append(
+                scrapers.FunctionQualifiers.scrape( target ) )
+        funcptr_type_subsets.append(
+                scrapers.FunctionPointers.scrape( target ) )
+        assignment_subsets.append(
+                scrapers.FunPtrAssignments.scrape( target ) )
+
+
+    ext_types, type_rules = rules.parse_rules_file( sys.argv[ 2 ] )
+
+    call_tree = merge_call_trees(
+            call_subtrees )
+    overrides = scrapers.Overrides.merge(
+            override_subtrees )
+    cursors = scrapers.FunctionCursors.merge(
+            cursor_subsets )
+    func_types = scrapers.FunctionQualifiers.merge(
+            func_type_subsets + [ ext_types ] )
+    funcptr_types = scrapers.FunctionPointers.merge(
+            funcptr_type_subsets )
+    assignments = scrapers.FunPtrAssignments.merge(
+            assignment_subsets )
 
     call_tree.augment_with_overrides( overrides )
-    pprint( overrides )
 
-    pprint( call_tree.tree )
+    aug_func_types = augment_types( call_tree, funcptr_types, func_types )
 
-    #pprint( func_tags )
+    all_func_types = scrapers.merge_disjoint_dicts( 
+            [ aug_func_types, funcptr_types ] )
 
-    rules = []
-    if tagsfile.tags_file:
-        external_tags, rules = parse_rules_file( tagsfile.tags_file )
+    assignment_violations = check_assignments(
+            assignments, funcptr_types, func_types )
 
-        for func, tagset in external_tags.items():
-            func_tags[ func ].update( tagset )
+    rule_violations = check_rules(
+            call_tree, all_func_types, type_rules )
 
-    logging.info( pformat( func_tags ) )
-    logging.info( pformat( call_tree.tree ) )
-
-    for rule in rules:
-        for violation in rule.check( call_tree.tree, func_tags ):
-            print( violation.render_string( func_cursors ) )
-            print()
-
-def grab_funcs( node ):
-    """
-    Populate the funcs data structure
-    """
-    if ( node.kind == CursorKind.FUNCTION_DECL or
-         node.kind == CursorKind.CXX_METHOD ):
-        full_name = node.get_usr()
-        qualifiers = ast_helpers.get_qualifiers( node )
-
-        logging.info( "Found %s [line=%s, col=%s of %s] -> %s" %
-                      ( node.get_usr(), node.location.line,
-                        node.location.column, node.location.file,
-                        str( ast_helpers.get_qualifiers( node ) ) ) )
-
-        func_tags[ full_name ] |= qualifiers
-
-        func_cursors[ full_name ] = node.canonical
-
-    for c in node.get_children():
-        grab_funcs( c )
+    for violation in chain( assignment_violations, rule_violations ):
+        print(
+                violation.render_string(
+                    cursors, funcptr_types, func_types ) )
+        print()
 
 if __name__ == '__main__':
     parser = OptionParser()

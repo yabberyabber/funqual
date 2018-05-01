@@ -54,6 +54,36 @@ def merge_disjoint_dicts( dicts ):
 
     return result
 
+def merge_overlapping_dicts( dicts ):
+    """
+    Merge a list of dictionaries where some may share keys but where
+    the value must be the same
+    """
+    result = {}
+
+    for mapping in dicts:
+        for key, value in mapping.items():
+            if key in result and result[ key ] != value:
+                raise Exception(
+                        "Key `{}` maps to both `{}` and `{}`".format(
+                            key, value, result[ key ] ) )
+            result[ key ] = value
+
+    return result
+
+
+def sloppy_merge_dicts( dicts ):
+    """
+    Merge a list of dictionaries where some values may be overridden
+    """
+    result = {}
+
+    for mapping in dicts:
+        for key, value in mapping.items():
+            result[ key ] = value
+
+    return result
+
 
 class FunctionPointers:
     @staticmethod
@@ -100,7 +130,7 @@ class FunctionQualifiers():
         func_tags = defaultdict( lambda: set() )
 
         for mapping in mappings:
-            for symbol, qualifiers in mapping:
+            for symbol, qualifiers in mapping.items():
                 func_tags[ symbol ] |= qualifiers
 
         return dict( func_tags )
@@ -130,7 +160,7 @@ class FunctionCursors:
 
         return func_cursors
 
-    merge = merge_disjoint_dicts
+    merge = sloppy_merge_dicts
 
 
 class Overrides:

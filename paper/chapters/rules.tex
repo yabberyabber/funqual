@@ -1,8 +1,94 @@
-\chapter{Validation}
+\chapter{Type Rules}\label{sec:rules}
 
-This chapter examines some of the unique properties that a tool like funqual needs to respect in order to function properly as well as how those properties were tested both in the code and in practice.  
+This chapter contains an overview of the rules implemented by funqual as well as a brief exploration of what needs to happen behind the scenes in order to correctly check these.  The first section simply explains the process of marking functions.  The second section shows what types of rules are supported by funqual.  The third section demonstrates special considerations made for function pointers and explains the rules for their use.  The final section explores the universe of special considerations and compromises made when creating the call-graph to be checked.  
 
-\section{Creating a Call Graph}
+Note this section focuses only on the conceptual design of funqual.  For any details on how to actually use it, refer to to \ref{sec:operation}.
+
+\section{Overview}
+
+\section{Function Qualifier Annotations with QTAG}
+
+One of the goals of funqual was that it be entirely compatible with the C++17 standard.  As such, funqual does not add any syntaxes to the language that would prevent annotated programs from being used by other tools (such as gcc or cppchecker).  Additionally, any C++17 code that exists "in the wild" should be checkable by funqual with no modification.  To this end, we use the existing C++17 annotation syntax to mark code.  
+
+For clarity and convenience we assume the following macro is in scope.  In practice, this macro can be repeated in the codebase or included in files containing function annotations:
+
+\begin{lstlisting}[language=C]
+#ifndef QTAG
+#define QTAG(TAG) __attribute__((annotate("funqual::" #TAG)))
+#endif
+\end{lstlisting}
+
+
+Note that the \code{\_\_attribute\_\_((annotate(foobar)))} syntax is generally used for compiler-specific directives (like packed, allign(8), noreturn, etc) and that attributes unknown by the compiler are simply ignored.  This allows us to insert information into the AST that is available after parsing but which will not effect compilation.
+
+Below is an example of the syntax for adding type qualifiers to a function.  The function below has two qualified types: \code{static\_memory} and \code{no\_io}.
+
+\begin{lstlisting}[language=C]
+int main() QTAG(static_memory) QTAG(no_io) {
+    return 0;
+}
+\end{lstlisting}
+
+Below is an example of the syntax for adding type qualifiers to a method prototype inline a class.  The function below has qualified type \code{static\_memory}.
+
+\begin{lstlisting}[language=C]
+class Panda {
+    Panda() QTAG(static_memory);
+};
+\end{lstlisting}
+
+Below is an example of the syntax for adding a type qualifier to a function pointer.  The function pointer below has qualified type \code{static\_memory}.
+
+\begin{lstlisting}[language=C]
+int QTAG(static_memory) (*func)(int, int);
+\end{lstlisting}
+
+Functions in the standard library can be annotated by simply repeating their prototype and adding a type qualifier annotation.  During the first phase of type checking, funqual will scrape the entire codebase and determine the union of all type annotations for each function symbol.  The following are a few examples:
+
+\begin{lstlisting}[language=C]
+void *malloc(size_t size) QTAG(dynamic_memory);
+
+// multiple qualifiers can be added at once like so
+int printf(const char *__restrict __format, ...) QTAG(io) QTAG(blocking);
+
+// the same function can be annotated in multiple places like so 
+// funqual will enforce the union
+void *malloc(size_t size) QTAG(blocking);
+\end{lstlisting}
+
+\section{Basic Rules}
+
+\subsection{Restrict Direct Call}
+
+\begin{center}
+    $restrict\_direct(X, Y) = ( V \in X \implies Y \not \in A ) \mid (V, A) \in G$
+\end{center}
+
+A restrict direct call requires that functions in set $X$ only ever call functions in set $Y$.  This constraint can be checked in time that is linear with the number of function calls in the program and can be reported very easily.  An example use case for this type of restriction might be to restrict realtime functions to only calling other realtime functions.
+
+\subsection{Restrict Indirect Call}
+
+\begin{center}
+    $restrict\_indirect(X, Y) = $
+\end{center}
+
+\subsection{Require Direct Call}
+
+\begin{center}
+    $require\_direct(X, Y) = ( V \in X \implies Y \in A ) \mid (V, A) \in G$
+\end{center}
+
+A require direct call requires that functions in set $X$ never call functions in set $Y$.  
+
+\section{Function Pointers Pointing}
+
+\subsection{Basic Annotation and Direct Type with QTAG}
+
+\subsection{Indirect Type with QTAG\_IND}
+
+\subsection{Rules of Assignment}
+
+\section{Special Considerations when Creating a Call Graph}
 
 \subsection{Bridging the Divide between Translation Units}
 
@@ -61,20 +147,3 @@ To solve this problem, we allude to the existing type system on function pointer
 
 This section contains explanation and motivation behind the call graph rules implemented in this tool.
 
-\subsection{Restrict Direct Call}
-
-\begin{center}
-    $restrict(X, Y) = ( V \in X \implies Y \in A ) \mid (V, A) \in G$
-\end{center}
-
-A restrict direct call requires that functions in set $X$ only ever call function sin set $Y$.  This constraint can be checked in time that is linear with the number of function calls in the program and can be reported very easily.  An example use case for this type of restriction might be to restrict realtime functions to only calling other realtime functions.
-
-\subsection{Restrict Indirect Call}
-
-\begin{center}
-    $restrict(X, Y) = $
-\end{center}
-
-\subsection{Call Tree Length}
-
-In cirtain circumstances (especially in embedded and kernel programming), the stack size is very limited.  It becomes important to statically ensure that the stack size of the program does not exceed a certain number of frames.  To do this, our tool can examine certain functions that are tagged with a stack size restriction and check all out-paths in the codebase to ensure that this function's stack size never exceeds the given number of frames.  This is modeled as a depth first search that bottoms out at a given depth and reports a warning to the user.

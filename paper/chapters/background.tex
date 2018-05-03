@@ -1,23 +1,28 @@
-\chapter{Background}
+\chapter{Background}\label{sec:background}
 
-This section aims to provide context for the work done in this paper as well as provide some intuition behind ow the solution here was reached.  The first section here touches on the kind of type system which should be familiar to most programmers.  The second section here demonstrates a different sort of type system which may not seem as familiar to readers.  A general explanation of the call tree is given in this section, though it will be developed in more specific detail later in the paper.  
+This section aims to provide context for the work done in this paper as well as provide some intuition behind funqual works the way that it does.  The first section here touches on the kind of type system which should be familiar to most programmers.  The second section here develops the concept of a call-graph and demonstrates how a type system might operate on it.
 
 \section{Type Qualifiers on Variables}\label{sec:bac:varqual}
 
-In most research into type-systems, type qualifiers are a way to refine variable types in order to introduce additional constraints.  These type qualifiers can generally be applied to any base type and can often be combined to form even more specific types.  A classic example that most programmers of C-family languages will know is the $const$ type qualifier.  Any identifier with the $const$ qualifier can be initialized with a value but can never be assigned to again.  This restriction can be statically typed and can often help prevent certain types of errors when used intelligently by the programmer \cite{theory-of-qual}.  Another type qualifier which may be familiar to C programmers is $volatile$ which tells the compiler (and programmer) that this variable may be changed suddenly by other execution environments \cite{theory-of-qual}.
+In most research into type-systems, type qualifiers are a way to refine variable types in order to introduce additional constraints.  These type qualifiers can generally be applied to any base type and can often be combined to form even more specific types.  A classic example that most programmers of C-family languages will know is the $const$ type qualifier.  Any identifier with the $const$ qualifier can be initialized with a value but can never be assigned to again.  This restriction can be statically checked and can often help prevent certain types of errors when used intelligently by the programmer \cite{theory-of-qual}.  Another type qualifier which may be familiar to C programmers is $volatile$ which tells the compiler (and programmer) that this variable may be changed suddenly by other execution environments \cite{theory-of-qual}.  The important thing to note is that the rules surrounding these type qualifiers are orthogonal to the rules of the main type system.  A $const$ identifier is treated the same way whether if it a $const int$ or a $const char*$ or a $const Panda$ - the \textit{type} and the \textit{type qualifiers} exist in separate type systems and so the rules are enforced separately.  
 
-Some compilers also have their own compiler-specific type qualifiers.  In Microsoft Visual C++, function parameters that are modified by the caller and referenced by the callee can be annotated with the $[Runtime::InteropServices::Out]$ qualifier to tell the programmer and the compiler that this is an out parameter.  Having a programming environment rich in these type refining qualifiers can help make the intent of source code easier for the programmer to infer and make it possible for those intents to be statically checked by the compiler.  
+Some compilers also have their own compiler-specific type qualifiers.  In Microsoft Visual C++, function parameters that are modified by the caller and referenced by the callee can be annotated with the $[Runtime::InteropServices::Out]$ qualifier to tell the programmer and the compiler that this is an out parameter.  Having a programming environment rich in these type qualifiers can help make the intent of source code easier for the programmer to infer and make it possible for those intents to be statically checked by the compiler.  
 
 In the majority of these systems, defining additional type qualifiers is either relegated to the language designers, the compiler writers, or the super-user.  There is not much tooling or support for the average programmer to create their own type qualifiers and there does not seem to be any sort of emphasis on creating project-specific qualifiers to help maintain program semantics.
 
-\section{Type Qualifiers on the Call Tree}\label{sec:bac:calltree}
+\section{Type Qualifiers on the Call Graph}\label{sec:bac:callgraph}
 
-The focus of this paper is on assigning and qualifying types of functions and enforcing constraints on where they can and cannot be called.  The central notion behind this sort of type checking is that every program has a call tree and that there are certain patterns in the call tree which must be prevented.  
+The focus of this paper is on creating and assigning type qualifiers for functions that constrain where those functions can and cannot be called.  The central notion behind this sort of type checking is that every program has a call graph and that there are certain patterns in the call graph which must be prevented.  
 
-The call tree of a program is a directed graph where every function is a node and where function calls are edges directed from the caller to the callee.  The type qualifiers in this context are applied to the edges and the things we wish to constrain are connections between edges.  Below is an example of a C program as well as the associated call tree.  The notion of a call tree will be expanded on later in this paper but the general concept is demonstrated here.  
+The call graph of a program is a directed graph where every function is a node and where function calls are edges directed from the caller to the callee.  The type qualifiers in this context are applied to the edges and the things we wish to constrain are connections between edges.  Below is an example of a C program as well as the associated call graph.
 
 \begin{minipage}[c]{0.95\textwidth}
 \begin{lstlisting}[language=C]
+int breed_and_release_pandas() {
+    Panda *baby_panda = malloc(sizeof(Panda));
+    release_panda(baby_panda);
+}
+
 int save_the_pandas() {
 	stop_deforestation());
 	if (pandas_are_saved()) {
@@ -43,4 +48,8 @@ int main(void) {
 
 \input{figures/panda-call-graph}
 
-As demonstrated by figure \ref{fig:pandacallgraph}, if there is a call from function $X$ to function $Y$ in the source code, there will be an edge pointing from node $X$ to node $Y$ in the associated call graph. 
+As demonstrated by figure \ref{fig:pandacallgraph}, if there is a call from function $X$ to function $Y$ in the source code, there will be an edge pointing from node $X$ to node $Y$ in the associated call graph.  We can say that $main$ directly calls $printf$ and $save\_the\_pandas$ and that $save\_the\_pandas$ directly calls $pandas\_are\_saved$, $stop\_deforestation$, and $breed\_and\_release\_pandas$ because there is an edge in the graph that directly connects these functions.  We can also say that $main$ indirectly calls $stop\_deforestation$ because there is a path from $main$ to to $stop\_deforestation$.
+
+Let us now imagine that there is some constraint whereby $save\_the\_pandas$ is not allowed to touch the heap.  Using existing tools, it would be possible to bar any function anywhere in the codebase from calling $malloc$ or to simply link to a nonstandard library without $malloc$ defined.  This solution is problematic, however, because now no entity in the entire codebase can call $malloc$.  What would be more useful is a system of marking functions that cannot call $malloc$ and having a tool check the call graph to make sure it does not happen.  
+
+

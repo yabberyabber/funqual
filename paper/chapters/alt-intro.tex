@@ -1,0 +1,54 @@
+\chapter{Introduction}
+
+Writing bug-free software is challenging if not impossible.  In the past 30 years, millions of dollars have been invested in tools that help developers write code that is robust, readable, and correct \cite{staticanal}.  In general these tools fall into two categories:  Dynamic Analysis tools such as gdb, valgrind, and IDA which analyze programs as they are running; and Static Analysis tools such as lint, cppcheck, and GCC -WAll.  All these tools have different use cases and can be used in conjunction to minimize the presence of errors in code.
+
+While these tools are extremely helpful in finding bugs in code, they are by no means complete.  Every tool uses a finite set of techniques to detect a specific class of issues.  Some tools examine the types of values and expressions to enforce type safety\cite{staticanal}, some tools examine ownership of objects to enforce memory safety\cite{rust-is-dope}, some tools examine the flow of values through a program to ensure security\cite{jqual-inference}, and many other tools do other things entirely.  
+
+This paper intends to add a new technique to the existing arsenal making it possible to check for errors which were previously undetectable.  To motivate this technique, we provide a problematic example.  The following snippet of C code has a bug in it - the reader is implored to find it:
+
+\begin{minipage}[c]{0.95\textwidth}
+\begin{lstlisting}[language=C]
+#include <stdio.h>
+#include <signal.h>
+#include <unistd.h>
+
+void sig_handler(int signo) {
+    printf("Received signal %d\n", signo);
+}
+
+int main(void) {
+    if (signal(SIGINT, sig_handler) == SIG_ERR) {
+        printf("Could not register signal handler\n");
+        return 1;
+    }
+
+    printf("Signal handler registered...\n");
+    while (1) {
+        printf("Waiting for signals...\n");
+        sleep(1);
+    }
+}
+\end{lstlisting}
+\end{minipage}
+
+Most well-seasoned C and C++ programmers would be at a loss to find the error - and the error certainly is obscure.  A quotation from the glibc library reference may be helpful here:
+
+\begin{quote}
+    If a function uses a static variable or a global variable, or a dynamically-allocated object that it finds for itself, then it is non-reentrant and any two calls to the function can interfere.
+\end{quote}
+
+By ``two calls'', the reference means two concurrent calls.  In the above snippet of code, a \lstinline{SIGINT} signal sent to the process preempts whatever function was currently executing and transfers execution to \lstinline{sig_handler}.  \lstinline{Sig_handler} proceeds to call \lstinline{printf} which may or may not already be executing in the main context.  This is problematic because \lstinline{printf} grabs a global lock around \lstinline{stdout} and in the case of concurrent calls results in deadlock.  Not good.
+
+The glibc library reference goes on to explicitly mention several common functions as being nonreentrant.  A few of them are \lstinline{malloc}, \lstinline{free}, \lstinline{fprintf}, \lstinline{printf}, and any function that modifies the global \lstinline{errno}, although any function which uses static, global, or dynamically-allocated state will fall into this category.  
+
+A stop-gap measure that could be implemented to solve this issue is to make a rule: \textit{No interrupt handlers are allowed to call nonreentrant functions} and to ask your peers to inspect all code by hand to enforce this requirement.  This is tedious, error-prone, and can be extremely difficuly for code at scale.  Let's say, for instnace, that \lstinline{sig_handler} called \lstinline{foo}, and \lstinline{foo} called \lstinline{bar}, and \lstinline{bar} called \lstinline{printf}.  Is it reasonable to expect a human to detect this error in judgement that occured through 4 layers of indirection?  Probably not.
+
+To solve this problem, and many others like it, we created a tool called funqual.  Funqual allows C++ programmers to tag certain functions and will statically check the call-graph and function tags against a set of user-defined rules.  This call-graph type system is totally orthogonal to the existing C++ type system and so does not interfere with or expand the existing type rules which should be familiar to C++ programmers.  Instead, funqual provides an additional set of restrictions which, when used intelligently by the developer, can help to detect certain kinds of errors statically.
+
+Funqual is written using libclang and does not require any additions to the syntax of C++.  As such, funqual can be run on C++17 code "in the wild" (code not designed to work with funqual);  additionally, code which has been annotated for use with funqual can be compiled directly with gcc or clang without any modification.  
+
+This thesis is laid out as follows:  Chapter \ref{sec:background} covers background information and formally develops the concepts of a call-graph and an indirect call.  Chapter \ref{sec:related} covers related work in such a way as to contrast the techniques of funqual from the techniques used by other tools in this domain.  Chapter \ref{sec:rules} gets into the theoretical details of how the type system in funqual works including a high level overview, an in-depth explanation of each individual rule, and some formal arguments for correctness.  Chapter \ref{sec:implementation} goes into the practical details about the implementation and usage of funqual.  Chapter \ref{sec:application} demonstrates funqual in action by showing how to apply it in some real-world projects.  Finally, Chapter \ref{sec:future} discusses future improvements that can be made to funqual and Chapter \ref{sec:conclusion} offers a conclusion.
+
+
+
+

@@ -1,7 +1,7 @@
 \begin{figure}
     \centering
     \begin{tikzpicture}[scale=1.0]
-        \tikzset{vertex/.style = {shape=circle,draw,minimum size=0.5em}}
+        \tikzset{vertex/.style = {shape=circle,draw,minimum size=8em}}
         \tikzset{edge/.style = {->,> = latex'}}
         % vertices
         \node[vertex] (main) at  (0,0) {$main$};
@@ -10,6 +10,8 @@
         \node[vertex] (breedandreleasepandas) at  (5,-10) {$breed\_and\_release\_pandas$};
         \node[vertex] (printf) at  (5,0) {$printf$};
         \node[vertex] (pandasaresaved) at (0,-10) {$pandas\_are\_saved$};
+        \node[vertex] (releasepanda) at (10, -5) {$release\_panda$};
+        \node[vertex] (malloc) at (10, -10) {malloc};
         %edges
         \draw[edge, -triangle 90, line width=0.5mm] (main) to (savethepandas);
         \draw[edge, -triangle 90, line width=0.5mm] (main) to (printf);
@@ -17,6 +19,8 @@
         \draw[edge, -triangle 90, line width=0.5mm] (savethepandas) to (breedandreleasepandas);
         \draw[edge, -triangle 90, line width=0.5mm] (savethepandas) to (pandasaresaved);
         \draw[edge, -triangle 90, line width=0.5mm] (savethepandas) to (printf);
+        \draw[edge, -triangle 90, line width=0.5mm] (breedandreleasepandas) to (releasepanda);
+        \draw[edge, -triangle 90, line width=0.5mm] (breedandreleasepandas) to (malloc);
     \end{tikzpicture}
     \caption{Call Graph for the Save the Pandas code listing}
     \label{fig:pandacallgraph}

@@ -1,0 +1,21 @@
+\chapter{Application}\label{sec:application}
+
+\section{Glibc Nonreentrant Functions}
+
+The following functions are documented in glibc to be non-reentrant:
+
+\begin{enumerate}
+    \item malloc
+    \item free
+    \item printf
+\end{enumerate}
+
+There are others.  We can mark interrupt handlers as one class and these functions as another and statially check that.
+
+\section{Restricting API available during initialization}
+
+My OS project was annotated so I didn't accidentally call malloc or printf before those things were initialized
+
+\section{Detecting noisy calls in high frequency contexts}
+
+Robotics was annotated and checked so I didn't accidentally have printf's in high frequency functions.

@@ -40,6 +40,14 @@
     year = "2014"
 }
 
+@article{rust-lang-spec,
+    title = "The Rust Programming Language",
+    author = "The Rust Team",
+    DOI = "https://killercup.github.io/trpl-ebook/trpl-2015-05-13-a4.pdf",
+    year = "2015",
+    month = "May"
+}
+
 @article{mozilla-pork,
     title = "Writing and Designing C++ Extensions and Transformers",
     author = "Vincent Ordy",
@@ -56,4 +64,67 @@
     year = "2007",
     month = "July",
     publisher = "Mozilla"
+}
+
+@article{static-anal-experience,
+    title = "Experiences with Program Static Analysis",
+    author = "Hideto Ogasawara and Minoru Aizawa and Atsushi Yamada",
+    year = "1998",
+    publisher = "Toshiba Corporation",
+    annote = {Adorable little briefing on the experiences that the Systems \& Software Labritories at Toshi had with static analysis tools being added to their development pipeline}
+}
+
+@article{libclang-survey,
+    title = "Comprehensive Analysis of C++ Applications using libClang API",
+    author = "Stephen Schaub and Brian A. Malloy",
+    institution = "Clemson University School of Computing",
+    publisher = "Software Engineering and Data Engineering: SEDE",
+    year = "2014",
+    month = "October",
+    annote = {Survey of tools that use libClang.  Lots of good information to cite on how libClang is leaps and bounds better than what the industry was previously using}
+}
+
+@inline{cpp-sucks,
+    title = "Defective C++",
+    author = "Yossi Kreinin",
+    DOI = "http://www.yosefk.com/c++fqa/defective.html",
+    year = "2016",
+    month = "November",
+    annote = {Part of a series questioning the C++ FAQ.  Called FQA (Frequently Questioned Answers).  Lots of complaints about C++ especailly regarding its grammar}
+}
+
+@inproceedings{parse-cpp,
+    author = {Padioleau, Yoann},
+    title = {Parsing C/C++ Code Without Pre-processing},
+    booktitle = {Proceedings of the 18th International Conference on Compiler Construction: Held As Part of the Joint European Conferences on Theory and Practice of Software, ETAPS 2009},
+    series = {CC '09},
+    year = {2009},
+    isbn = {978-3-642-00721-7},
+    location = {York, UK},
+    pages = {109--125},
+    numpages = {17},
+    url = {http://dx.doi.org/10.1007/978-3-642-00722-4_9},
+    doi = {10.1007/978-3-642-00722-4_9},
+    acmid = {1532837},
+    publisher = {Springer-Verlag},
+    address = {Berlin, Heidelberg},
+} 
+
+@article{lclint-og,
+    author = "David Evans and John Guttag and James Horning and Yang Meng Tan",
+    title = "LCLint: A Tool for Using Specifications to Check Code",
+    year = "1994",
+    month = "December",
+    journal = "SIGSOFT Symposium on the Foundations of Software Engineering",
+    publisher = "University of Virginia Department of Computer Science",
+    annote = {LCLint is a really old tool designed to take C code along with some extra supplimental specifications and to check that C code against those specifications}
+}
+
+@article{lclint-memory,
+    author = "David Evans",
+    title = "Static Detection of Dynamic Memory Errors",
+    year = "1996",
+    month = "May",
+    journal = "SIGPLAN",
+    annote = "Adding a few annotations to LCLint so that it can check for nullness errors and some memory errors statically"
 }

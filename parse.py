@@ -17,7 +17,7 @@ from rule_checker import check_rules
 
 logging.basicConfig( filename="dbg_output", filemode="w", level=logging.DEBUG )
 
-def main( files, tagsfile ):
+def scrape_all_files( files, ext_types ):
     call_subtrees = []
     override_subtrees = []
     cursor_subsets = []
@@ -44,9 +44,6 @@ def main( files, tagsfile ):
         assignment_subsets.append(
                 scrapers.FunPtrAssignments.scrape( target ) )
 
-
-    ext_types, type_rules = rules.parse_rules_file( sys.argv[ 2 ] )
-
     call_tree = merge_call_trees(
             call_subtrees )
     overrides = scrapers.Overrides.merge(
@@ -63,20 +60,36 @@ def main( files, tagsfile ):
     call_tree.augment_with_overrides( overrides )
 
     aug_func_types = augment_types( call_tree, funcptr_types, func_types )
+    standard_funcs = set( [ key for key in func_types.keys() ] )
 
     all_func_types = scrapers.merge_disjoint_dicts( 
             [ aug_func_types, funcptr_types ] )
 
-    assignment_violations = check_assignments(
-            assignments, funcptr_types, func_types )
+    return call_tree, all_func_types, cursors, assignments, standard_funcs
+
+def get_violations( files, tagsfile ):
+
+    ext_types, type_rules = rules.parse_rules_file( tagsfile )
+
+    ( call_tree, all_func_types, cursors,
+      assignments, standard_funcs ) = scrape_all_files( files, ext_types )
 
     rule_violations = check_rules(
-            call_tree, all_func_types, type_rules )
+            call_tree, all_func_types, type_rules, standard_funcs )
 
-    for violation in chain( assignment_violations, rule_violations ):
+    assignment_violations = check_assignments(
+            assignments, all_func_types )
+
+    return ( cursors, all_func_types,
+             chain( assignment_violations, rule_violations ) )
+
+def main( files, tagsfile ):
+    cursors, types, violations = get_violations( files, tagsfile )
+
+    for violation in violations:
         print(
                 violation.render_string(
-                    cursors, funcptr_types, func_types ) )
+                    cursors, types ) )
         print()
 
 if __name__ == '__main__':
@@ -88,4 +101,4 @@ if __name__ == '__main__':
 
     ( options, args ) = parser.parse_args()
 
-    main( args, options )
+    main( args, options.tags_file )

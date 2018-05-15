@@ -5,7 +5,7 @@ from scrapers import AnnotationKind
 
 
 class Rule( object ):
-    def check( self, call_tree, func_tags ):
+    def check( self, call_tree, func_tags, standard_funcs ):
         raise NotImplementedError( "Child class should override this" )
 
 
@@ -24,7 +24,7 @@ class RuleRestrictIndirectCall( Rule ):
                     self.callee_tag,
                     self.caller_tag )
 
-    def check( self, call_tree, func_tags ):
+    def check( self, call_tree, func_tags, standard_funcs ):
         caller_funcs = set()
         for caller_func, caller_tags in func_tags.items():
             if self.caller_tag in direct_type( caller_tags ):
@@ -34,21 +34,33 @@ class RuleRestrictIndirectCall( Rule ):
             for callee_func in call_tree.calls( caller_func ):
                 yield from self._check_func( callee_func, call_tree,
                                              func_tags,
-                                             [ caller_func ] )
+                                             [ caller_func ],
+                                             standard_funcs )
 
     def _check_func( self, curr, call_tree, func_tags,
-                     path ):
-        if ( self.callee_tag in direct_type( func_tags.get( curr, set() ) )
-             or
-             self.callee_tag in indirect_type( func_tags.get( curr, set() ) ) ):
-            yield RuleViolation( self,
-                                 path + [ curr ] )
+                     path, standard_funcs ):
+        if curr in standard_funcs:
+            # curr is a standard func and not a funcptr
+            # then we ignore indirect type
+            if self.callee_tag in direct_type( func_tags.get( curr, set() ) ):
+                yield RuleViolation( self,
+                                     path + [ curr ] )
+        else:
+            # curr is a funptr so we do look at indirect type
+            if ( self.callee_tag in direct_type( func_tags.get( curr, set() ) )
+                 or
+                 self.callee_tag in indirect_type(
+                     func_tags.get( curr, set() ) ) ):
+                yield RuleViolation( self,
+                                     path + [ curr ] )
+
 
         for callee_func in call_tree.calls( curr ):
             if callee_func not in path:
                 yield from self._check_func( callee_func, call_tree,
                                              func_tags,
-                                             path + [ curr ] )
+                                             path + [ curr ],
+                                             standard_funcs )
 
 
 class RuleRequireCall( Rule ):
@@ -70,7 +82,7 @@ class RuleRequireCall( Rule ):
                     self.caller_tag,
                     self.callee_tag )
 
-    def check( self, call_tree, func_tags ):
+    def check( self, call_tree, func_tags, standard_funcs ):
         to_check = []
         for func, tags in func_tags.items():
             if self.caller_tag in direct_type( tags ):

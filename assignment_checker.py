@@ -9,7 +9,7 @@ import sys
 from scrapers import AnnotationKind
 from violation import AssignmentViolation
 
-def split_type( usr, funptr_types, augmented_fun_types ):
+def split_type( usr, fun_types ):
     """
     Split the type of a function into its direct and indirect constituents
     """
@@ -17,17 +17,15 @@ def split_type( usr, funptr_types, augmented_fun_types ):
     return (
             set( [ name
                    for ( kind, name )
-                   in funptr_types.get( usr, set() ) |
-                      augmented_fun_types.get( usr, set() )
+                   in fun_types.get( usr, set() )
                    if kind == AnnotationKind.DIRECT ] ),
             set( [ name 
                    for ( kind, name )
-                   in funptr_types.get( usr, set() ) |
-                      augmented_fun_types.get( usr, set() )
+                   in fun_types.get( usr, set() )
                    if kind == AnnotationKind.INDIRECT ] ) )
 
 
-def check_assignments( assignments, funptr_types, augmented_fun_types ):
+def check_assignments( assignments, fun_types ):
     """
     Check all the assignments in the given list of assignments.  Takes in
     a list of assignments, a mapping of function pointer usr's to their 
@@ -37,9 +35,9 @@ def check_assignments( assignments, funptr_types, augmented_fun_types ):
     """
     for lvalue, rvalue, cursor in assignments:
         lvalue_direct_type, lvalue_indirect_type = split_type(
-                lvalue, funptr_types, augmented_fun_types )
+                lvalue, fun_types )
         rvalue_direct_type, rvalue_indirect_type = split_type(
-                rvalue, funptr_types, augmented_fun_types )
+                rvalue, fun_types )
 
         # direct types must match
         # right indirect type must be subset of left indirect type

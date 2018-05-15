@@ -4,13 +4,13 @@ import sys
 from violation import RuleViolation
 
 
-def check_rules( call_tree, func_types, rules ):
+def check_rules( call_tree, func_types, rules, standard_funcs ):
     """
     Given a program call tree, a mapping from function to its type, and
     a set of rules, apply each rule and return all the rule violations
     """
     for rule in rules:
-        yield from rule.check( call_tree, func_types )
+        yield from rule.check( call_tree, func_types, standard_funcs )
 
 
 if __name__ == '__main__':
@@ -30,6 +30,7 @@ if __name__ == '__main__':
     func_types = scrapers.merge_disjoint_dicts( [
             scrapers.FunctionQualifiers.scrape( target ),
             ext_types ] )
+    standard_funcs = set( func_types.keys() )
     funcptr_types = scrapers.FunctionPointers.scrape( target )
     assignments = scrapers.FunPtrAssignments.scrape( target )
 
@@ -41,7 +42,7 @@ if __name__ == '__main__':
             [ aug_func_types, funcptr_types ] )
 
     rule_violations = check_rules(
-            call_tree, all_func_types, rules )
+            call_tree, all_func_types, rules, standard_funcs )
 
     for violation in rule_violations:
         print(

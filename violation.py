@@ -13,8 +13,7 @@ class BaseViolation( object ):
     A violation is a problem with the user's program that must be reported
     to the user.
     """
-    def render_string( self, func_cursors, funptr_types,
-                       aug_fun_types ):
+    def render_string( self, func_cursors, fun_types ):
         """
         Return a human readable string that explains to the user what the
         violation is, means, and where to look.
@@ -28,12 +27,9 @@ class AssignmentViolation( BaseViolation ):
         self.rvalue = rvalue
         self.cursor = cursor
 
-    def render_string( self, func_cursors, funptr_types,
-                       augmented_fun_types ):
-        ltype = ( augmented_fun_types.get( self.lvalue, set() ) |
-                  funptr_types.get( self.lvalue, set() ) )
-        rtype = ( augmented_fun_types.get( self.rvalue, set() ) |
-                  funptr_types.get( self.rvalue, set() ) )
+    def render_string( self, func_cursors, fun_types ):
+        ltype = fun_types.get( self.lvalue, set() )
+        rtype = fun_types.get( self.rvalue, set() )
 
         return """Assignment violation:
     {} = {} at ({}, {})
@@ -58,7 +54,7 @@ class RuleViolation( BaseViolation ):
         self.rule = rule
         self.call_path = call_path
 
-    def render_string( self, func_cursors, funcptr_types, aug_func_types ):
+    def render_string( self, func_cursors, fun_types ):
         ret = "Rule violation: {0}\n".format( str( self.rule.error_string() ) )
 
         pretty_path = [ get_human_name( func_cursors[ func_usr ] )

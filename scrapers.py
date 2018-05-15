@@ -100,7 +100,7 @@ class FunctionPointers:
 
         return funptrs
 
-    merge = merge_disjoint_dicts
+    merge = merge_overlapping_dicts
 
 
 class FunctionQualifiers():

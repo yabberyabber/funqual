@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import clang.cindex
 from clang.cindex import CursorKind, TranslationUnit
 import unittest

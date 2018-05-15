@@ -2,7 +2,7 @@
 
 import sys
 from clang.cindex import CursorKind
-from ast_helpers import get_translation_unit
+from ast_helpers import get_translation_unit, is_function_pointer
 from collections import defaultdict
 
 class AnnotationKind:
@@ -157,7 +157,12 @@ class FunctionCursors:
                 cursor = trav.canonical
 
                 func_cursors[ full_name ] = cursor
+            if ( trav.kind in [ CursorKind.VAR_DECL ]
+                 and is_function_pointer( trav ) ):
+                full_name = trav.get_usr()
+                cursor = trav.canonical
 
+                func_cursors[ full_name ] = cursor
         return func_cursors
 
     merge = sloppy_merge_dicts

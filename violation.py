@@ -5,6 +5,7 @@ to read them.
 """
 
 from ast_helpers import get_human_name
+from scrapers import AnnotationKind
 
 class BaseViolation( object ):
     """
@@ -36,13 +37,20 @@ class AssignmentViolation( BaseViolation ):
 
         return """Assignment violation:
     {} = {} at ({}, {})
- - lvalue is of type {}
- - rvalue is of type {}
+ - lvalue has type
+    - Direct: {}
+    - Indirect: {}
+ - rvalue has type
+    - Direct: {}
+    - Indirect: {}
 Direct type must match.
 Lvalue indirect type must be subset of rvalue indirect type""".format(
             self.lvalue, self.rvalue,
             self.cursor.location.line, self.cursor.location.column,
-            str( ltype ), str( rtype ) )
+            set( [ x[1] for x in ltype if x[0] == AnnotationKind.DIRECT ] ),
+            set( [ x[1] for x in ltype if x[0] == AnnotationKind.INDIRECT ] ),
+            set( [ x[1] for x in rtype if x[0] == AnnotationKind.DIRECT ] ),
+            set( [ x[1] for x in rtype if x[0] == AnnotationKind.INDIRECT ] ) )
 
 
 class RuleViolation( BaseViolation ):

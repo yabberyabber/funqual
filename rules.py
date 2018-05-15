@@ -16,7 +16,7 @@ class RuleRestrictIndirectCall( Rule ):
         self.message = message
 
     def __str__( self ):
-        return "restruct_indirect_call({0}, {1})".format( self.caller_tag,
+        return "restrict_indirect_call({0}, {1})".format( self.caller_tag,
                                                           self.callee_tag )
 
     def error_string( self ):
@@ -38,7 +38,9 @@ class RuleRestrictIndirectCall( Rule ):
 
     def _check_func( self, curr, call_tree, func_tags,
                      path ):
-        if self.callee_tag in direct_type( func_tags.get( curr, set() ) ):
+        if ( self.callee_tag in direct_type( func_tags.get( curr, set() ) )
+             or
+             self.callee_tag in indirect_type( func_tags.get( curr, set() ) ) ):
             yield RuleViolation( self,
                                  path + [ curr ] )
 

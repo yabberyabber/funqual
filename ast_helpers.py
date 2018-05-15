@@ -78,5 +78,8 @@ def get_qualifiers( node ):
 
     return res
 
+def is_function_pointer( cursor ):
+    return '(*)' in cursor.type.spelling
+
 if __name__ == '__main__':
     dump_ast(get_translation_unit(sys.argv[1]).cursor, print)

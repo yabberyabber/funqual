@@ -1,149 +1,15 @@
 \chapter{Type Rules}\label{sec:rules}
 
-This chapter contains an overview of the rules implemented by funqual as well as a brief exploration of what needs to happen behind the scenes in order to correctly check these.  The first section simply explains the process of marking functions.  The second section shows what types of rules are supported by funqual.  The third section demonstrates special considerations made for function pointers and explains the rules for their use.  The final section explores the universe of special considerations and compromises made when creating the call-graph to be checked.  
+Funqual checks a program against a type system.  It is a script that takes in source code as well some user-defined call graph rules, does some computation, and prints one of two things: ``This program is well-typed'', or ``This program is not well typed'' (in practice the later case also comes with an explanation as to why the program is not well-typed).  If a program is well-typed, then it is free from call graph rule violations.  If a program is not well-typed, then it may contain one or more errors.
 
-Note this section focuses only on the conceptual design of funqual.  For any details on how to actually use it, refer to to \ref{sec:operation}.
+This Chapter contains an overview of the rules implemented by funqual as well as a brief exploration of what needs to happen behind the scenes in order to correctly check these rules.  Section \ref{sec:rules:overview} demonstrates the big picture of what these rules are trying to accomplish.  Section \ref{sec:rules:rules} is a detailed explanation of each of the call graph constraints supported by funqual.  Section \ref{sec:rules:funptrs} explains how type qualifiers are applied to function pointers and how funqual checks them.  Finally, Section \ref{sec:rules:special} explains a few special cases and explains how funqual handles them to create a complete call graph.
 
-\section{Overview}
+Note that this Section focuses only on the conceptual design of funqual and its type system.  For details on how it is implemented or how to use it, refer to \mbox{Chapter \ref{sec:implementation}}.
 
-\section{Function Qualifier Annotations with QTAG}
+\input{chapters/rules/overview}
 
-One of the goals of funqual was that it be entirely compatible with the C++17 standard.  As such, funqual does not add any syntaxes to the language that would prevent annotated programs from being used by other tools (such as gcc or cppchecker).  Additionally, any C++17 code that exists "in the wild" should be checkable by funqual with no modification.  To this end, we use the existing C++17 annotation syntax to mark code.  
+\input{chapters/rules/function-pointers}
 
-For clarity and convenience we assume the following macro is in scope.  In practice, this macro can be repeated in the codebase or included in files containing function annotations:
+\input{chapters/rules/call-graph-rules}
 
-\begin{lstlisting}[language=C]
-#ifndef QTAG
-#define QTAG(TAG) __attribute__((annotate("funqual::" #TAG)))
-#endif
-\end{lstlisting}
-
-
-Note that the \code{\_\_attribute\_\_((annotate(foobar)))} syntax is generally used for compiler-specific directives (like packed, allign(8), noreturn, etc) and that attributes unknown by the compiler are simply ignored.  This allows us to insert information into the AST that is available after parsing but which will not effect compilation.
-
-Below is an example of the syntax for adding type qualifiers to a function.  The function below has two qualified types: \code{static\_memory} and \code{no\_io}.
-
-\begin{lstlisting}[language=C]
-int main() QTAG(static_memory) QTAG(no_io) {
-    return 0;
-}
-\end{lstlisting}
-
-Below is an example of the syntax for adding type qualifiers to a method prototype inline a class.  The function below has qualified type \code{static\_memory}.
-
-\begin{lstlisting}[language=C]
-class Panda {
-    Panda() QTAG(static_memory);
-};
-\end{lstlisting}
-
-Below is an example of the syntax for adding a type qualifier to a function pointer.  The function pointer below has qualified type \code{static\_memory}.
-
-\begin{lstlisting}[language=C]
-int QTAG(static_memory) (*func)(int, int);
-\end{lstlisting}
-
-Functions in the standard library can be annotated by simply repeating their prototype and adding a type qualifier annotation.  During the first phase of type checking, funqual will scrape the entire codebase and determine the union of all type annotations for each function symbol.  The following are a few examples:
-
-\begin{lstlisting}[language=C]
-void *malloc(size_t size) QTAG(dynamic_memory);
-
-// multiple qualifiers can be added at once like so
-int printf(const char *__restrict __format, ...) QTAG(io) QTAG(blocking);
-
-// the same function can be annotated in multiple places like so 
-// funqual will enforce the union
-void *malloc(size_t size) QTAG(blocking);
-\end{lstlisting}
-
-\section{Basic Rules}
-
-\subsection{Restrict Direct Call}
-
-\begin{center}
-    $restrict\_direct(X, Y) = ( V \in X \implies Y \not \in A ) \mid (V, A) \in G$
-\end{center}
-
-A restrict direct call requires that functions in set $X$ only ever call functions in set $Y$.  This constraint can be checked in time that is linear with the number of function calls in the program and can be reported very easily.  An example use case for this type of restriction might be to restrict realtime functions to only calling other realtime functions.
-
-\subsection{Restrict Indirect Call}
-
-\begin{center}
-    $restrict\_indirect(X, Y) = $
-\end{center}
-
-\subsection{Require Direct Call}
-
-\begin{center}
-    $require\_direct(X, Y) = ( V \in X \implies Y \in A ) \mid (V, A) \in G$
-\end{center}
-
-A require direct call requires that functions in set $X$ never call functions in set $Y$.  
-
-\section{Function Pointers Pointing}
-
-\subsection{Basic Annotation and Direct Type with QTAG}
-
-\subsection{Indirect Type with QTAG\_IND}
-
-\subsection{Rules of Assignment}
-
-\section{Special Considerations when Creating a Call Graph}
-
-\subsection{Bridging the Divide between Translation Units}
-
-The compilation of C++ code is driven by translation units.  Translation units are the files which are inputted into the C compiler to be translated into object files.  In general, translation units are singular $.c$ or $.cpp$ files where the preprocessor has already expanded all macros (including $#include$ substitutions).  During this process, many symbols are said to have $external linkage$ meaning that their type is specified in this translation unit but not their value or definition (this is the case with extern variables, function prototypes, and class forward declarations).  In these cases, examining the call tree of a single translation unit is not sufficient to enforcing global call-tree constraints because we would be able to see which internally linked functions call externally linked functions but not vise versa.  
-
-To solve this problem we need to examine every translation unit in the source tree and build a call tree which represents the entire codebase.  In order to test this, we create several test cases where functions are defined in multiple translation units and where function a call tree constraint is violated between translation units.
-
-\subsection{Dealing with Inheritance}\label{sec:val:inherit}
-
-According to the Liskov Substution Principal, "if $S$ is a subtype of $T$, then objects of type $T$ in a program may be replaced with objects of type $S$ without altering any of the desirable properties of that program".  In this work, we assume this to be a basic principal of object oriented design and build off it.  For the purpose of this paper, "if $S$ is a subtype of $T$ and $M$ is a method of $S$, then calls to $T.M$ in a program may be replaced with objects of $S.M$ without altering any of the desirable properties of that program".  As a result of this, when typechecking a call to $T.M$, we must also typecheck a call to $S.M$ to ensure that substituting $S$ for $M$ does not violate our call tree constraints.
-
-In practice, this mean that for any method call from $C$ to $T.M$ where $C$ is the calling context and $M$ is a method of $T$, we must add an edge in our call graph from $C$ to $T.M$ and also from $C$ to $S.M$ for any $S$ that is a direct or indirect subtype of $T$.  
-
-Below is a code example that demonstrates this rule in use:
-
-\begin{minipage}[c]{0.95\textwidth}
-\begin{lstlisting}[language=C++]
-void *malloc(size_t size) FUNQUAL(dynamic_memory);
-
-class Panda {
-protected:
-    int m_hunger;
-public:
-    int Feed() {
-        m_hunger--;
-    }
-};
-
-class RedPanda : public Panda{
-public:
-    int Feed() {
-        char *buff = malloc(30);
-        m_hunger--;
-    }
-};
-
-void feedPanda(Panda *panda) FUNQUAL(static_memory) {
-    panda->Feed();
-}
-
-int main(void) {
-    feedPanda(new RedPanda());
-}
-\end{lstlisting}
-\end{minipage}
-
-This example shows a function called feedPanda which calls $Panda.Feed$.  This function also shows that $malloc$ is tagged with $dynamic\_memory$ and that $feedPanda$ is tagged with $static\_memory$.  Presumably there is a indirect call restriction that prevents functions tagged with static\_memory from calling (either directly or indirectly) functions tagged with dynamic\_memory.  It we simply looked at the type of $panda$, we would falsely believe that this program is typesafe.  However, we see that it's possible for the actual type of $panda$ to be $RedPanda$ in which case we call $RedPanda::Feed$ which calls $malloc$ which violates our static memory constraint.  To solve this problem, we must create a call graph which contains edges pointing to both $Panda::Feed$ and $RedPanda::Feed$.
-
-\subsection{Function Pointers Pointing}
-
-Just like functions, function pointers need to have their place in the call graph.  Function pointers are difficult because we can't always know at build-time what they refer to.  With a standard function, we can simply build a mapping that goes from the function to its body.  With function pointers, we have to be able to accommodate for the pointer referencing different functions at different times.
-
-To solve this problem, we allude to the existing type system on function pointers.  According to the C++ standard, in order to assign a function pointer to reference an existing function, the type of the function pointer must match the type of the function being referenced.  We continue this trend by forcing the type qualifiers of the function pointer to match the type qualifiers of the function being referenced.  These type qualifiers can, of course, be forcibly removed by a cast in extreme circumstances, but we believe that this rule ensure consistency between within the call tree in the face of function pointers.
-
-\section{Checking the Call Graph}
-
-This section contains explanation and motivation behind the call graph rules implemented in this tool.
-
+\input{chapters/rules/special-cases}

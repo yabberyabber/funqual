@@ -1,20 +1,20 @@
 \chapter{Background}\label{sec:background}
 
-This Chapter aims to provide context for funqual as well as to provide an intuition for why funqual works the way that it does.  Section \ref{sec:bac:varqual} presents a brief review of type systems that should be familiar to most programmers; special care is taken to define systems of type qualifiers.  It is included to contrast with Section \ref{sec:bac:callgraph}.  Section \ref{sec:bac:callgraph} develops the concept of a call-graph and demonstrates how a type system might operate on it.  
+This Chapter aims to provide context for funqual as well as to provide an intuition for why funqual works the way that it does.  Section \ref{sec:bac:varqual} presents a brief review of type systems that should be familiar to most programmers; special care is taken to define systems of type qualifiers.  Section \ref{sec:bac:callgraph} develops the concept of a call-graph and sets the stage for the two concepts to be combined later in the paper.  
 
-\section{Type Qualifiers on Variables}\label{sec:bac:varqual}
+\section{Classic Type Qualifiers}\label{sec:bac:varqual}
 
 In most research into type-systems, type qualifiers are a way to refine variable types in order to introduce additional constraints.  These type qualifiers can generally be applied to any base type and can often be combined to form even more specific types.  A classic example that most programmers of C-family languages will know is the \lstinline{const} type qualifier.  Any identifier with the \lstinline{const} qualifier can be initialized with a value but can never be assigned to again.  This restriction can be statically checked and can often help prevent certain types of errors when used intelligently by the programmer \cite{theory-of-qual}.  Another type qualifier which may be familiar to C programmers is \lstinline{volatile} which tells the compiler (and programmer) that this variable may be changed suddenly by other execution environments \cite{theory-of-qual}.  The important thing to note is that the rules surrounding these type qualifiers are orthogonal to the rules of the main type system.  A \lstinline{const} identifier is treated the same way whether it a \lstinline{const int} or a \lstinline{const char*} or a \lstinline{const Panda} or even a \lstinline{const volatile int} - the \textit{type} and the \textit{type qualifiers} exist in separate type systems and so the rules are enforced separately.  
 
 Some compilers also have their own compiler-specific type qualifiers.  In Microsoft Visual C++, function parameters that are modified by the caller and referenced by the callee can be annotated with the \lstinline{[Runtime::InteropServices::Out]} qualifier to tell the programmer and the compiler that this is an out parameter.  Having a programming environment rich in these type qualifiers can help make the intent of source code easier for the programmer to infer and make it possible for those intents to be statically checked by the compiler.  
 
-In the majority of these systems, defining additional type qualifiers is either relegated to the language designers or the compiler maintainers.  There is not much tooling or support for the average programmer to create their own type qualifiers and there does not seem to be any sort of emphasis on creating project-specific qualifiers to help maintain program semantics.
+In the majority of these systems, defining additional type qualifiers is either relegated to the language designers or to the compiler maintainers.  There is not much tooling or support for the average programmer to create their own type qualifiers and there does not seem to be any sort of emphasis on creating project-specific qualifiers to help maintain program semantics.
 
-\section{Type Qualifiers on the Call Graph}\label{sec:bac:callgraph}
+\section{Turning Program Source into a Call Graph}\label{sec:bac:callgraph}
 
 The focus of this paper is on creating and analyzing type qualifiers for functions that constrain where those functions can and cannot be called.  The central notion behind this sort of type checking is that every program has a call graph and that there are certain patterns in the call graph which must be prevented.  
 
-The call graph of a program is a directed graph where each function is a vertex and where each call is an edge directed from the caller to the callee.  The type qualifiers in this context are applied to the vertices and the things we wish to constrain are connections between vertices.  Below is an example of a C program and its associated call graph.
+A program's call graph is a directed graph where each function is a vertex and where each call is an edge directed from the caller to the callee.  The type qualifiers in this context are applied to the vertices and the things we wish to constrain are connections between vertices.  Below is an example of a C program and its associated call graph.
 
 \begin{minipage}[c]{0.95\textwidth}
 \begin{lstlisting}[language=C,caption={Example C program.  The call graph for this program is shown in Figure \ref{fig:pandacallgraph}},label={lst:pandasource}]
@@ -35,7 +35,6 @@ int save_the_pandas() {
 		printf("Breeding pandas in captivation and releasing them has saved the pandas!\n");
 		return 1;
 	}
-
 	return 0;
 }
 
@@ -49,14 +48,8 @@ int main(void) {
 
 \input{figures/panda-call-graph}
 
-As demonstrated in Figure \ref{fig:pandacallgraph}, if there is a call from function $X$ to function $Y$ in the source code, there will be an edge pointing from node $X$ to node $Y$ in the associated call graph.  We can say that \lstinline{main} directly calls \lstinline{printf} and \lstinline{save_the_pandas} and that \lstinline{save_the_pandas} directly calls \lstinline{pandas_are_saved}, \lstinline{stop_deforestation}, and \lstinline{breed_and_release_pandas} because there is an edge in the graph that directly connects these functions.  We can also say that \lstinline{main} indirectly calls \lstinline{stop_deforestation} because there is a path from \lstinline{main} to \lstinline{stop_deforestation}.
+As demonstrated in Figure \ref{fig:pandacallgraph}, every function in the source code has a vertex in the graph and every function call in the source code has an edge in the graph.  If there is a call from function $X$ to function $Y$ in the source code, there will be an edge pointing from node $X$ to node $Y$ in the associated call graph. 
 
-Let us now imagine that there is some constraint whereby \lstinline{save_the_pandas} is not allowed to allocate memory.  Using conventional tools, it would be possible to bar any function anywhere in the codebase from calling \lstinline{malloc} or to simply link to a nonstandard library without \lstinline{malloc} defined.  This solution is problematic, however, because it prevents us from calling \lstinline{malloc} anywhere in the codebase rather than just from \lstinline{save_the_pandas}.  What would be more useful is a system for marking functions that cannot call \lstinline{malloc} and having a tool check the call graph to make sure it does not happen.  
-
-To accomplish this we will create two type qualifiers:  \lstinline{static_memory} and \lstinline{dynamic_memory}.  When the programmer qualifies a function with \lstinline{static_memory}, that declares the intent that this function will \textit{never} allocate memory on the heap.  When the programmer qualifies a function with \lstinline{dynamic_memory}, that declares the intent that this function always allocates memory on the heap.  In the example about saving the pandas, we would tag \lstinline{save_the_pandas} as \lstinline{static_memory} and we would tag \lstinline{malloc} as \lstinline{dynamic_memory}.  Below is the call diagram for the code again, but with \lstinline{static_memory} functions marked green and with \lstinline{dynamic_memory} functions marked red:
-
-\input{figures/colored-panda-call-graph}
-
-By turning the program into a directed graph and by assigning types to vertices, we have transformed the problem of type safety into a graph problem.  A question like \textit{are there any static\_memory functions that inadvertently call dynamic\_memory functions} essentially boils down to \textit{are there any paths from green vertices to red vertices}.  In this example, the answer to that question is yes.  In the code, \lstinline{save_the_pandas} calls \lstinline{breed_and_release_pandas} which calls \lstinline{malloc} constituting an illicit call.  Equivalently, \lstinline{save_the_pandas} has an edge to \lstinline{breed_and_release_pandas} which has an edge to \lstinline{malloc} constituting an illicit path.  A well-typed program has no paths from green vertices to red vertices.  A poorly-typed program will have at least one path.  
-
-This section only intends to establish the isomorphism between the program source and the call graph and to demonstrate the usefulness of this call graph representation.  For a more detailed explanation of all the rules, refer to Chapter \ref{sec:rules}
+\begin{sloppypar}
+This graph representation makes it easy to reason about the program algorithmically.  Does \lstinline{main} contain a call to \lstinline{breed_and_release_pandas}?  No.  You can tell because there is no edge from \lstinline{main} to \lstinline{breed_and_release_pandas}.  Does \lstinline{breed_and_release_pandas} contain a call to \lstinline{release_panda}?  Yes.  You can tell because there is an edge from \lstinline{breed_and_release_pandas} to \lstinline{release_panda}.  Does \lstinline{save_the_pandas} indirectly call \lstinline{malloc}?  Yes.  You can tell because there is a path from \lstinline{save_the_pandas} to \lstinline{malloc}.  Thanks to the call graph, questions about what functions call what boil down to classic path finding algorithms.  
+\end{sloppypar}

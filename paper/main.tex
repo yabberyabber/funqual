@@ -17,11 +17,17 @@
 \usepackage{float}
 \usepackage{listings}
 \usepackage{color}
+\usepackage{colortbl}
  
 \definecolor{codegreen}{rgb}{0,0.6,0}
 \definecolor{codegray}{rgb}{0.5,0.5,0.5}
 \definecolor{codepurple}{rgb}{0.58,0,0.82}
 \definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\definecolor{tablegreen}{rgb}{0.9, 1.0, 0.9}
+\definecolor{tablered}{rgb}{1.0, 0.9, 0.9}
+
+\usepackage{courier}
  
 \lstdefinestyle{mystyle}{
     backgroundcolor=\color{backcolour},   
@@ -29,7 +35,7 @@
     keywordstyle=\color{magenta},
     numberstyle=\tiny\color{codegray},
     stringstyle=\color{codepurple},
-    basicstyle=\footnotesize,
+    basicstyle=\footnotesize\ttfamily,
     breakatwhitespace=false,         
     breaklines=true,                 
     captionpos=b,                    
@@ -51,6 +57,8 @@
 \usepackage{titlesec}
 \usepackage{tikz}
 \usetikzlibrary{arrows}
+\usetikzlibrary{shapes}
+\usetikzlibrary{patterns}
 \usepackage[breaklinks=true,hidelinks,pdfusetitle]{hyperref}
 \usepackage{cleveref}
 \usepackage{ifthen}
@@ -66,11 +74,11 @@
 \titlespacing*{\chapter}{0pt}{-20pt}{4.3ex plus .2ex}
 
 
-\titleformat*{\section}{\normalsize\bfseries}
-\titleformat*{\subsection}{\small\bfseries}
-\titleformat*{\subsubsection}{\small\bfseries}
-\titleformat*{\paragraph}{\small\bfseries}
-\titleformat*{\subparagraph}{\small\bfseries}
+\titleformat{\section}[block]{\normalsize\bfseries}{\thesection. }{}{}
+\titleformat{\subsection}[block]{\small\bfseries}{\thesubsection. }{}{}
+\titleformat{\subsubsection}[block]{\small\bfseries}{\thesubsubsection. }{}{}
+\titleformat{\paragraph}[block]{\small\bfseries}{}{}{}
+\titleformat{\subparagraph}[block]{\small\bfseries}{}{}{}
 
 \bibliographystyle{abbrv}
 

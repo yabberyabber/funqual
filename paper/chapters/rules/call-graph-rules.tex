@@ -1,0 +1,126 @@
+\section{Call Graph Rules}\label{sec:rules:rules}
+
+% X and Y are type qualifiers (sets of functions)
+% E is set of edges
+% P is set of paths
+% A and B are functions
+
+Each Subsection here describes one of the call graph constratins supported by funqual.  For each constraint, we explain the meaning of the rule, provide an algorithm that could check a call graph for violations, and present an argument for the algorithm's correctness with respect to the rest of the type system.  The algorithms in this section are not the same as the algorithms actually implemented in the funqual tool, but instead are tools for argument.  
+
+\subsection{Restrict Direct Call}
+
+\begin{center}
+    $restrict\_direct\_call(X, Y)$
+\end{center}
+
+A restrict direct call rule creates a constraint that functions with direct type $X$ cannot call functions with direct type $Y$.  This constraint is relatively permissive because it still allows indirect calls from functions with direct type $X$ to functions with direct type $Y$ but is nonetheless checkable by this type system and so is supported by funqual because it was easy to do so.
+
+Listing \ref{lst:rules:rules:restrict_direct_call} shows pseudocode for an algorithm that could check a call graph for violations of this rule.  Assume that $edges$ is a list of objects representing all the calls in the call graph.  
+
+\noindent\begin{minipage}[t]{\linewidth}
+\begin{lstlisting}[caption={Pseudocode for an algorithm that could check a $restrict\_direct\_call$ constraint.  This algorithm returns \lstinline{true} if the call graph respects the constraint and \lstinline{false} if the call graph violates it.},label={lst:rules:rules:restrict_direct_call}]
+function enforce_restrict_direct_call(X, Y, edges):
+    for edge in edges:
+        callee = edge.to
+        caller = edge.from
+
+        if X in caller.direct_type and Y in callee.direct_type:
+            return false
+    return true
+\end{lstlisting}
+\end{minipage}
+
+This algorithm is relatively straightforward and runs in linear time with respect to the number of edges in the call graph.  To defend the correctness of this algorithm we will put each function call in this graph into one of two possible cases:  a call to a standard function, or a call to a function pointer.
+
+In the case of a standard function call, the correctness is trivial.  The user must have annotated the direct type of both the caller and the callee and we will assume these user-provided annotations to be correct.  If a function with direct type $X$ calls a function with direct type $Y$ then \lstinline{edges} will contain such an edge and in checking each edge we will detect it.  
+
+In the case of the function pointer call, we need to also examine all possible assignments of that function pointer.  It is of course possible that the function pointer is null at runtime, but we will consider this type of error to be out of the scope of funqual.  For the sake of this argument, let $P$ stand for any function pointer and $F$ stand for any function.  For an assignment of $F$ into $P$ to be valid, $F$ and $P$ must have the same direct type.  If they do not have the same direct type, then funqual will inform the user of an assignment type violation.  If they do have the same direct type, then an edge calling $P$ will appear in \lstinline{edges} and that edge will be checked in the same way as a standard function call.  
+
+\subsection{Restrict Indirect Call}
+
+\begin{center}
+    $restrict\_indirect\_call(X, Y)$
+\end{center}
+
+A restrict indirect call rule creates a constraint that functions in $X$ cannot eventually lead to a call to a function in $Y$.  This is a stronger constraint than the the restrict direct call rule because this rule restricts both direct and indirect calls.  The need to enforce indirect calls in the presence of function pointers requires us to examine both the direct type of the callee as well as the indirect type. 
+
+Listing \ref{lst:rules:rules:restrict_indirect_call} shows pseudocode for an algorithm that could check a call graph for violations of this rule.  Assume that $edges$ is a list of objects representing all the calls in the call graph.  
+
+\noindent\begin{lstlisting}[caption={Pseudocode for an algorithm that could check a $restrict\_indirect\_call$ constraint.  This algorithm returns \lstinline{true} if the call graph respects the constraint and \lstinline{false} if the call graph violates it.},label={lst:rules:rules:restrict_indirect_call}]
+function enforce_restrict_indirect_call(X, Y, edges):
+    for edge in edges:
+        callee = edge.to
+        caller = edge.from
+
+        if callee is a regular function:
+            callee.indirect_type = infer_indirect_type(callee, edges)
+
+        if X in caller.direct_type and Y in callee.direct_type:
+            return false
+        if X in caller.direct_type and Y in callee.indirect_type:
+            return false
+    return true
+
+function infer_indirect_type(function, edges):
+    indirect_types = empty set
+
+    visited = empty set
+
+    to_visit = empty set
+    to_visit.add(function)
+
+    while to_visit is not empty:
+        curr = to_visit.pop()
+        visited.add(curr)
+
+        indirect_types.add_all(curr.direct_type)
+        indirect_types.add_all(curr.indirect_type)
+
+        for edge in edges:
+            callee = edge.to
+            caller = edge.from
+            if caller == curr and callee not in visited:
+                to_visit.add(callee)
+    return indirect_types
+\end{lstlisting}
+
+The need to infer the indirect types of functions makes this algorithm much more complicated than the previous.  As it is written, the complexity is $O(|E|^2 * |V|)$ in the worse case but this algorithm could easily be improved by caching type inferences.  Showing the correctness of this code is much more complicated but again can be simplified by breaking it down case by case.
+
+In the event that there is a direct call from a function with direct type $X$ to a function with direct type $Y$, this algorithm will detect it.  Direct types are annotated statically so we can trust that \lstinline{callee.direct_type} is correct.  If a function with direct type $X$ calls a function with direct type $Y$, then \lstinline{edges} will contain that edge and the algorithm checks this case on line 9.
+
+In the event that there is a direct call from a function with direct type $X$ to a function pointer with indirect type $Y$, this algorithm will detect it.  Indirect types for function pointers are annotated by the user and checked for each assignment and so we can trust that \lstinline{callee.indirect_type} is correct.  If a function with direct type $X$ calls a function pointer with indirect type $Y$, then \lstinline{edges} will contain that edge and the algorithm checks this case on line 11.
+
+In the event that there is an indirect call from a function with direct type $X$ to a function with direct type $Y$, this algorithm will also detect it.  For this example, let function $A$ call function $B$ which calls function $C$.  Also let $A$ have direct type $X$ and let $C$ have direct type $Y$.  When the loop in \lstinline{enforce_restrict_indirect_call} reaches the edge from $A$ to $B$, it will call \lstinline{infer_indirect_type} to determine the indirect type of $B$.  In doing so, the algorithm will visit the edge from $B$ to $C$ and will return an indirect type containing $Y$.  The algorithm will see that $A$ has direct type $X$ and that $B$ has indirect type $Y$ and will terminate having detected the error on line 11.  
+
+In the event that there is an indirect call from a function with direct type $X$ to a function pointer with indirect type $Y$, a similar sequence of events will occur.  For this example, let function $A$ call function $B$ which calls function pointer $C$.  Also let $A$ have direct type $X$ and let $C$ have indirect type $Y$.  When \lstinline{enforce_restrict_indirect_call} visits the call from $A$ to $B$, it will infer the indirect type of $B$. During this process, it will visit all vertices reachable from $B$ which includes $C$ and it will return the union of all direct and indirect types visited which includes $Y$.  As a result, $Y$ is in the indirect type of $B$ and the algorithm will terminate on line 11 having detected the error.
+
+Lastly we need to argue for the assignment rules for function pointers.  Let $F$ be some function and $C$ be some function pointer.  Recall that for an assignment of $F$ into $C$ to typecheck, the direct types of $F$ and $C$ need to match exactly and the indirect type of $C$ needs to be a superset of the indirect type of $F$.  In this case, if at any point the user tried to assign the value of $F$ into $C$ and $F$ had indirect type $Y$, then $C$ would also have to have indirect type $Y$ otherwise funqual would have reported an assignment type error.  Assigning $F$ into $C$ necessitates that the indirect type of $F$ be present in the indirect type of $C$.  In the example where $A$ calls $B$ which calls $C$, we can be certain that when inferring the indirect type of $B$ that it will visit $C$ which must have an indirect type which accumulates the indirect types of all the things it could point to.  
+
+\subsection{Require Direct Call}
+
+\begin{center}
+    $require\_direct\_call(X, Y)$
+\end{center}
+
+A require direct call rule creates a constraint that functions with direct type $X$ can only call functions with direct type $Y$. Much like the restrict direct call rule, this rule is relatively easy to check and can be checked in time linear with respect to the number of edges in the call graph.
+
+Listing \ref{lst:rules:rules:require_direct_call} shows pseudocode for an algorithm that could check a call graph for violations of this rule.  Assume that $edges$ is a list of objects representing all the calls in the call graph.  
+
+\noindent\begin{minipage}[t]{\linewidth}
+\begin{lstlisting}[caption={Pseudocode for an algorithm that could check a $require\_direct\_call$ constraint.  This algorithm returns \lstinline{true} if the call graph respects the constraint and \lstinline{false} if the call graph violates it.},label={lst:rules:rules:require_direct_call}]
+function enforce_restrict_direct_call(X, Y, edges):
+    for edge in edges:
+        callee = edge.to
+        caller = edge.from
+
+        if X in caller.direct_type and Y not in callee.direct_type:
+            return false
+    return true
+\end{lstlisting}
+\end{minipage}
+
+To defend the correctness of this algorithm, we will put every function call into one of two possible cases: a call to a standard function, or a call to a function pointer.
+
+In the case of a call to a standard function, the correctness is trivial.  The user must have annotated the direct type of both the caller and the callee and we trust the user in these regards.  If a function with direct type $X$ calls any function, then \lstilnine{edges} will contain an edge from the caller to the callee.  Checking the direct types of caller and callee exhaustively for every edge in the graph will eventually find any violations.
+
+In the case of a function pointer call, we need to also examine all the possible assignments of that function pointer.  Thankfully the assignment checker already checked the type safety of every function pointer assignment so we will assume that those are correct.  In this case specifically, we can assume that, if the function which is actually called does not have direct type $Y$, then the function pointer which is called in code will also not have direct type $Y$.  This call creates an edge which will certainly be visited by \lstinline{enforce_restrict_direct_call} and so we can be certain that any function pointer invocation will be correctly checked in this regard.

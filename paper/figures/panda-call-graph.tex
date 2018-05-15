@@ -4,14 +4,22 @@
         \tikzset{vertex/.style = {shape=circle,draw,minimum size=8em}}
         \tikzset{edge/.style = {->,> = latex'}}
         % vertices
-        \node[vertex] (main) at  (0,0) {$main$};
-        \node[vertex] (savethepandas) at  (0,-5) {$save\_the\_pandas$};
-        \node[vertex] (stopdeforestation) at  (5,-5) {$stop\_deforestation$};
-        \node[vertex] (breedandreleasepandas) at  (5,-10) {$breed\_and\_release\_pandas$};
-        \node[vertex] (printf) at  (5,0) {$printf$};
-        \node[vertex] (pandasaresaved) at (0,-10) {$pandas\_are\_saved$};
-        \node[vertex] (releasepanda) at (10, -5) {$release\_panda$};
-        \node[vertex] (malloc) at (10, -10) {$malloc$};
+        \node[vertex] (main) at
+            (0,0) {\lstinline{main}};
+        \node[vertex] (savethepandas)
+            at  (0,-5) {\lstinline{save_the_pandas}};
+        \node[vertex] (stopdeforestation)
+            at  (5,-5) {\lstinline{stop_deforestation}};
+        \node[vertex] (breedandreleasepandas)
+            at  (5,-10) {\lstinline{breed_and_release_pandas}};
+        \node[vertex] (printf)
+            at  (5,0) {\lstinline{printf}};
+        \node[vertex] (pandasaresaved)
+            at (0,-10) {\lstinline{pandas_are_saved}};
+        \node[vertex] (releasepanda)
+            at (10, -5) {\lstinline{release_panda}};
+        \node[vertex] (malloc)
+            at (10, -10) {\lstinline{malloc}};
         %edges
         \draw[edge, -triangle 90, line width=0.5mm] (main) to (savethepandas);
         \draw[edge, -triangle 90, line width=0.5mm] (main) to (printf);

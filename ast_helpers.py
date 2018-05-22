@@ -6,13 +6,28 @@ from collections import defaultdict
 import pdb
 import sys
 
-def get_translation_unit( fname ):
+def get_translation_unit( fname, cmd_args ):
     index = clang.cindex.Index.create()
     options = TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD
-    tu = index.parse( fname, options=options, args=[ '-x',  'c++', '-std=c++17', ] )
 
-    for diag in tu.diagnostics:
-        print( diag )
+    args = [
+            '-x', cmd_args.language,
+            '-std=' + cmd_args.standard,
+    ]
+
+    if cmd_args.include_path:
+        for path in cmd_args.include_path.split( ',' ):
+            args.append( '-I' )
+            args.append( path )
+
+    tu = index.parse( fname, options=options, args=args )
+
+    if tu.diagnostics:
+        print( "\nParsing errors for {}".format( fname ) )
+        for diag in tu.diagnostics:
+            print( "\t{}".format( str( diag ) ) )
+        if cmd_args.verbose:
+            print( "Clang arguments: {}".format( ' '.join( args ) ) )
 
     return tu
 

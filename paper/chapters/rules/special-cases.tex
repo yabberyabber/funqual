@@ -2,14 +2,14 @@
 
 \subsection{Dealing with Inheritance}\label{sec:rules:inherit}
 
-According to the Liskov Substution Principal, ``if $S$ is a subtype of $T$, then objects of type $T$ in a program may be replaced with objects of type $S$ without altering any of the desirable properties of that program''.  In this work, we assume this to be a basic principal of object oriented design.  For the purpose of this paper, ``if $S$ is a subtype of $T$ and $M$ is a method of $S$, then calls to $T.M$ in a program may be replaced with objects of $S.M$ without altering any of the desirable properties of that program''.  As a result of this, when typechecking a call to $T.M$, we must also typecheck a call to $S.M$ to ensure that substituting $S$ for $M$ does not violate our call tree constraints.
+When calling a virtual method in C++, it is impossible to know at compile time exactly which function is going to be run at run-time.  This is very similar to the problem of function pointers (and in fact dynamic dispatch is usually implemented as a table of function pointers \cite{language-standard}) except that in the case of virtual functions we actually know statically the set of possible functions that could be called\footnote{Funqual assumes that it has access to the full source code for call graph creation}.  To account for this, we need to add extra edges to our call graph to represent all the possible places that a virtual method call could go.  
 
-In practice, this mean that for any method call from $C$ to $T.M$ where $C$ is the calling context and $M$ is a method of $T$, we must add an edge in our call graph from $C$ to $T.M$ and also from $C$ to $S.M$ for any $S$ that is a direct or indirect subtype of $T$.  
+Let $C$ be some function that calls $T.M$ where $T$ is some class and $M$ is a virtual method of $T$.  When creating the call graph, we must surely add an edge from $C$ to $T.M$.  In addition to that, though, for any class $S$ that is a subclass of $T$, we must also add an edge from $C$ to $S.M$.  This accounts for any possible overloads of $M$ that might be called at run-time.
 
-Listing \ref{lst:rules:inheritance} demonstrates this concept.  It is a piece of C source code that calls a virtual function.  Figure \ref{fig:rules:inheritance} shows the call tree for this code sample.  
+Listing \ref{lst:rules:inheritance} demonstrates this concept.  It is a piece of C++ source code that calls a virtual function.  Figure \ref{fig:rules:inheritance} shows the call graph for this code sample.  
 
 \noindent\begin{minipage}[t]{\linewidth}
-\begin{lstlisting}[language=C++,caption={Example C program demonstrating inheritance.  In \lstinline{feedPanda}, it is impossible to know statically which instance of the \lstinline{Feed} function will be called.  Figure \ref{fig:rules:inheritance} shows the call graph for this program.},label={lst:rules:inheritance}]
+\begin{lstlisting}[language=C++,caption={Example C++ program demonstrating inheritance.  In \lstinline{feedPanda}, it is impossible to know statically which instance of the \lstinline{Feed} function will be called.  Figure \ref{fig:rules:inheritance} shows the call graph for this program.},label={lst:rules:inheritance}]
 class Panda {
 protected:
     int m_hunger;
@@ -23,7 +23,7 @@ class RedPanda : public Panda{
 public:
     int Feed() override {
         Stomach *stomach = malloc(sizeof(Stomach));
-        memset(stomach, 0xBEEF, sizeof(Stomach));
+        memset(stomach, 0xFF, sizeof(Stomach));
     }
 };
 
@@ -60,16 +60,16 @@ int main(void) {
     \label{fig:rules:inheritance}
 \end{figure}
 
-For this example we will continue to assume that there is a rule restricting indirect calls from \lstinline{static_memory} functions to \lstinline{dynamic_memory} functions.  In \lstinline{feedPanda} we can see that we call \lstinline{Panda.Feed}.  This is somewhat misleading:  \lstinline{Panda::Feed} is a virtual function and it is overridden by a child class called \lstinline{RedPanda}.  This means that any time \lstinline{feedPanda} is called, it is impossible to know whether it is \lstinline{Panda::Feed} being called or whether it is actually \lstinline{RedPanda::Reed} being called.  The only safe way to handle this scenario is to assume that \lstinline{feedPanda} calls both of them.  This is reflected in Figure \ref{fig:rules:inheritance} which is a call tree showing \lstinline{feedPanda} pointing to both versions of the \lstinline{Feed} function.  
+For this example we will continue to assume that there is a rule restricting indirect calls from \lstinline{static_memory} functions to \lstinline{dynamic_memory} functions.  In \lstinline{feedPanda} we can see that we call \lstinline{Panda::Feed}.  This is somewhat misleading:  \lstinline{Panda::Feed} is a virtual function and it is overridden by a child class called \lstinline{RedPanda}.  This means that any time \lstinline{feedPanda} is called, it is impossible to know whether it is \lstinline{Panda::Feed} being called or whether it is actually \lstinline{RedPanda::Feed} being called.  The only safe way to handle this scenario is to assume that \lstinline{feedPanda} calls both of them.  This is reflected in Figure \ref{fig:rules:inheritance} which is a call graph showing \lstinline{feedPanda} pointing to both versions of the \lstinline{Feed} function.  
 
 \subsection{Operator Overloading}
 
-C++ allows for operator overloading.  As a result, an expression such as \mbox{\lstinline{int a = b + c;}} could result in a function call depending on the types of \lstinline{a} and \lstinline{b}.  
+C++ allows for operator overloading.  As a result, an expression such as \mbox{\lstinline{a = b + c;}} could result in a function call depending on the types of \lstinline{a} and \lstinline{b}.  
 
 Compensating for this is relatively straightforward.  When funqual comes across a binary or unary operator that can be overloaded, it checks the type of the operand(s) and checks for an operator overload.  If there is an operator overload, then the call graph will contain an edge from the calling context to the overload function.  If the overload is virtual, funqual checks for operator overloads in child classes as described in Section \ref{sec:rules:inherit}.
 
 \subsection{Bridging the Divide between Translation Units}
 
-The compilation of C++ code is driven by translation units.  Translation units are the files which are inputted into the C compiler to be translated into object files.  In general, translation units are singular \lstinline{.c} or \lstinline{.cpp} files including any source files that may be \lstinline{#include}-ed.  During this process, many symbols are said to have \textit{external linkage} meaning that their type is specified in this translation unit but not their value or definition (this is the case with extern variables, function prototypes, and class forward declarations).  In these cases, examining the call tree of a single translation unit is not sufficient to enforcing global call-tree constraints because we would not be able to see the calls made in other translation units which may be of interest for enforcing indirect call restrictions.  
+The compilation of C++ code is driven by translation units.  Translation units are the files which are provided to the C compiler to be translated into object files.  In general, translation units are singular \lstinline{.c} or \lstinline{.cpp} files including any source files that may be \lstinline{#include}-ed.  During this process, many symbols are said to have \textit{external linkage} meaning that their type is specified in this translation unit but that their value is not (this is the case with extern variables, function prototypes, and class forward declarations).  In these cases, examining the call graph of a single translation unit is not sufficient to enforcing global call-tree constraints because we would not be able to see the calls made in other translation units which may be of interest for enforcing indirect call restrictions.  
 
-To solve this problem we need to examine every translation unit in the source tree and build a call tree which represents the entire codebase.  In order to test this, we create several test cases where functions are defined in multiple translation units and where function a call tree constraint is violated between translation units.
+To solve this problem we need to examine every translation unit in the source and build a call graph that represents the entire codebase.  In order to test this, we create several test cases where functions are defined in multiple translation units and where a function call graph constraint is violated between translation units.

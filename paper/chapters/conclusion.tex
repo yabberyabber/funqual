@@ -1,3 +1,7 @@
-\chapter{conclusion}\label{sec:conclusion}
+\chapter{Conclusion}\label{sec:conclusion}
 
-It worked good.  How do I measure that though?
+The goal of this thesis was to create a tool that can enforce a type system on a program's call-graph.  In Chapter \ref{sec:intro} we motivated the need for a tool that can enforce call graph constraints; in Chapter \ref{sec:rules} we explored a type system that allows the user to categorize and restrict edges and vertices in a call graph; in Chapter \ref{sec:implementation} we showed a tool that enforces this type system; and in Chapter \ref{sec:application} we demonstrated that tool in action solving real problems.  The goal we set has been achieved and our work is done. 
+
+But our work is not done.  Static analysis is a fun and interesting topic of research but it is not a purely academic pursuit.  Tools like funqual exist to help people write high quality software.  Many tools have already been written to help people write high quality software \cite{jqual-inference, staticanal, lclint-og, lclint-memory}, and funqual will certainly not be the last.  However, with each generation of static analysis tools comes new techniques and new classes of issues which can be checked statically.  Years ago, memory safety was a difficult problem in a variety of languages but today we have languages like rust which has a type system built in to check memory safety \cite{rust-is-dope}.  
+
+Funqual will never find all the bugs in a program.  This is not a failure on the part of funqual, but rather an affirmation that writing bug-free software is challenging if not impossible.  Future work is needed to determine its effectiveness during the development cycle, but at this moment the ideas behind funqual are ready to be incorporated into the existing pantheon of C and C++ static analysis tools.  

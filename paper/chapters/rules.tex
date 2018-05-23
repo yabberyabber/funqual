@@ -2,9 +2,9 @@
 
 Funqual checks a program against a type system.  It is a script that takes in source code as well some user-defined call graph rules, does some computation, and prints one of two things: ``This program is well-typed'', or ``This program is not well typed'' (in practice the later case also comes with an explanation as to why the program is not well-typed).  If a program is well-typed, then it is free from call graph rule violations.  If a program is not well-typed, then it may contain one or more errors.
 
-This Chapter contains an overview of the rules implemented by funqual as well as a brief exploration of what needs to happen behind the scenes in order to correctly check these rules.  Section \ref{sec:rules:overview} demonstrates the big picture of what these rules are trying to accomplish.  Section \ref{sec:rules:rules} is a detailed explanation of each of the call graph constraints supported by funqual.  Section \ref{sec:rules:funptrs} explains how type qualifiers are applied to function pointers and how funqual checks them.  Finally, Section \ref{sec:rules:special} explains a few special cases and explains how funqual handles them to create a complete call graph.
+This chapter contains an overview of the rules implemented by funqual as well as a brief exploration of what needs to happen behind the scenes in order to correctly check these rules.  Section \ref{sec:rules:overview} demonstrates the big picture of what these rules are trying to accomplish.  Section \ref{sec:rules:funptrs} explains how type qualifiers are applied to function pointers and how funqual checks them.  Section \ref{sec:rules:rules} is a detailed explanation of each of the call graph constraints supported by funqual.  Finally, Section \ref{sec:rules:special} explains a few special cases and explains how funqual handles them to create a complete call graph.
 
-Note that this Section focuses only on the conceptual design of funqual and its type system.  For details on how it is implemented or how to use it, refer to \mbox{Chapter \ref{sec:implementation}}.
+Note that this chapter focuses only on the conceptual design of funqual and its type system.  For details on how it is implemented or how to use it, refer to \mbox{Chapter \ref{sec:implementation}}.
 
 \input{chapters/rules/overview}
 

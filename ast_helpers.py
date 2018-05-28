@@ -20,9 +20,20 @@ def get_translation_unit( fname, cmd_args ):
             args.append( '-I' )
             args.append( path )
 
-    tu = index.parse( fname, options=options, args=args )
+    if cmd_args.clang_flags:
+        for flag in cmd_args.clang_flags.split( ' ' ):
+            args.append( flag )
 
-    if tu.diagnostics:
+    print( fname )
+    try:
+        tu = index.parse( fname, options=options, args=args )
+    except Exception as e:
+        print( "\nFailed to parse {}".format( fname ) )
+        if cmd_args.verbose:
+            print( "Clang arguments: \n\t{}".format( '\n\t'.join( args ) ) )
+        tu = None
+
+    if tu is not None and tu.diagnostics:
         print( "\nParsing errors for {}".format( fname ) )
         for diag in tu.diagnostics:
             print( "\t{}".format( str( diag ) ) )

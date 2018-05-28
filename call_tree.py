@@ -33,6 +33,9 @@ class CallTree():
             for callee in list( self.calls( func ) ):
                 self.addAll( func, overrides[ callee ] )
 
+    def size( self ):
+        return sum( [ len( val ) for val in self.tree.values() ] )
+
 def merge_call_trees( subtrees ):
     """
     Union two call trees into a single merged call tree

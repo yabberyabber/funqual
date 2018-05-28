@@ -26,11 +26,17 @@ def scrape_all_files( files, ext_types, options ):
     funcptr_type_subsets = []
     assignment_subsets = []
 
+    tu_time = 0.0
+    start_time = time.time()
+
     for fname in files:
+        pre_tu_time = time.time()
         target = ast_helpers.get_translation_unit( fname, options )
 
         logging.info( "Translation unit: " + str( target.spelling ) )
         ast_helpers.dump_ast( target.cursor, lambda x: logging.debug(x) )
+
+        tu_time += time.time() - pre_tu_time
 
         call_subtrees.append(
                 build_call_tree( target ) )
@@ -66,6 +72,13 @@ def scrape_all_files( files, ext_types, options ):
     all_func_types = scrapers.merge_disjoint_dicts( 
             [ aug_func_types, funcptr_types ] )
 
+    end_time = time.time()
+
+    if options.show_time:
+        print( "time to parse: {:0.5f} seconds".format( tu_time ) )
+        print( "time to scrape stuff: {:0.5f} seconds".format( 
+            end_time - start_time - tu_time ) )
+
     return call_tree, all_func_types, cursors, assignments, standard_funcs
 
 def get_violations( files, tagsfile, options ):
@@ -91,10 +104,13 @@ def get_violations( files, tagsfile, options ):
     if options.show_time:
         print( "Time to parse files: {:0.3f} Seconds".format(
             post_file_parse - pre_file_parse ) )
-        print( "Time to check graph rules: {:0.3f} Seconds".format(
+        print( "Time to check graph rules: {:0.5f} Seconds".format(
             post_rule_checking - post_file_parse ) )
-        print( "Time to check assignments: {:0.3f} Seconds".format(
+        print( "Time to check assignments: {:0.5f} Seconds".format(
             post_assignment_checking - post_rule_checking ) )
+        print( "Functions examined (includes libraries and ptrs): {}".format(
+            len( all_func_types ) ) )
+        print( "Calls examined: {}".format( call_tree.size() ) )
 
     return ( cursors, all_func_types,
              chain( assignment_violations, rule_violations ) )
@@ -132,6 +148,11 @@ if __name__ == '__main__':
                               + "For multiple directories, comma separate." ),
                        metavar="FILE", default=None )
 
+    parser.add_option( "-f", dest="clang_flags",
+                       help=( "any flags to be passed directly to clang "
+                              + "(for multiple flags, enclose in quotes)"),
+                       metavar="FLAGS", default=None )
+
     parser.add_option( "-v", action="store_true", dest="verbose",
                        help="Verbose mode makes more dbg output",
                        default=False )
@@ -142,4 +163,7 @@ if __name__ == '__main__':
 
     ( options, args ) = parser.parse_args()
 
-    main( args, options )
+    if len( sys.argv ) == 1:
+        parser.print_help( sys.stderr )
+    else:
+        main( args, options )

@@ -1,58 +1,11 @@
 \chapter{Application}\label{sec:application}
 
-This Chapter demonstrates three real use-cases for funqual.  In each Section below, we explain a project that funqual was applied to, the problem that funqual was used to detect, and the outcome of using funqual to detect that problem.  \mbox{Section \ref{sec:app:reentrancy}} describes using funqual to prevent reentrancy errors in a class assignment for Operating Systems at Cal Poly (CSC453).  Section \ref{sec:app:pre-malloc} describes using funqual to prevent use of \lstinline{malloc} and \lstinline{printf} during bootup of a custom kernel written for a class assignment in Operating Systems 2 at Cal Poly (CSC454).  Lastly, \mbox{Section \ref{sec:app:blocking}} describes using funqual to prevent the use of potentially blocking calls in high frequency loops in a robotics application.  
+This chapter demonstrates three real use-cases for funqual.  In each section below, we outline the application of funqual to a project, the constraint that funqual was used to enforce, and the outcome of using funqual to check that constraint.  \mbox{Section \ref{sec:app:reentrancy}} describes using funqual to prevent reentrancy errors in a class assignment for Operating Systems at Cal Poly (CSC453).  Section \ref{sec:app:pre-malloc} describes using funqual to prevent use of \lstinline{malloc} and \lstinline{printf} during bootup of a custom kernel written in a class assignment for Operating Systems 2 at Cal Poly (CSC454).  Lastly, \mbox{Section \ref{sec:app:blocking}} describes using funqual to prevent the use of potentially blocking calls in high frequency loops in a robotics application.  
 
-All of these projects were developed before funqual existed so funqual was not used during the development cycle.  The goal of this Chapter is to demonstrate that funqual can scale beyond small test cases and to demonstrate how funqual can be used to address a variety of real-world issues.  
+All of these projects were developed before funqual existed, so funqual was not used during the development cycle.  The goal of this chapter is to demonstrate that funqual can scale beyond small test cases and to demonstrate how funqual can be used to address a variety of real-world issues.  
 
-\section{Glibc Nonreentrant Functions}\label{sec:app:reentrancy}
+\input{chapters/applications/reentrancy}
 
-\interfootnotelinepenalty=10000
+\input{chapters/applications/pre-malloc}
 
-The GNU C Library Reference Manual warns against calling nonreentrant functions from signal handlers \cite{gnu-manual}.  A nonreentrant function is anything that modifies memory on the heap.  The issue generally arises when a function modifies a global datastructure (e.g. \lstinline{malloc}) or grabs a global lock (e.g. \lstinline{printf}) while another call to that function is concurrently doing so.  Reentrancy is a separate but similar concept to thread-safety; a reentrant function is thread-safe but a thread-safe function may not necessarily be reentrant.  As an example, \lstinline{printf} could be considered thread safe because it locks the stream while writing each character to it\footnote{Most implementations of \lstinline{printf} lock the stream per-character rather than per-string.  This means that running \mbox{\lstinline{printf("aaa")}} and \mbox{\lstinline{printf("bbb")}} concurrently might result in \mbox{\lstinline{"ababab"}} or \mbox{\lstinline{"aaabbb"}} but never in \mbox{\lstinline{"b0aa"}} or \mbox{\lstinline{SEGFAULT}}}.  However, if a call to \lstinline{printf} is interrupted while it holds the lock and the interrupt handler makes its own call to \lstinline{printf}, then the interrupt handler will wait for the lock.  Since the code holding the lock cannot run until the interrupt handler finishes, the system is in deadlock.  This is bad --- we would like to prevent this error as well as errors like it.  
-
-Funqual can find and report this type of error.  To demonstrate this, we will take a class assignment written for Operating Systems class (CSC453) that uses signal handlers, insert function type qualifiers, and create a rules file.  The assignment was to simulate a set of snakes crawling around the screen.  Each time the user pressed control-C (creating a \lstinline{SIGINT} signal), one of the snakes would disappear.  When the user tried to kill the process (creating a \lstinline{SIGQUIT} signal), the program would make each snake disappear and then terminate.  If a signal were sent during a call to a nonreentrant function, that function would be preempted by the signal handler; if the signal handler called that same nonreentrant function, this could result in undefined behavior.  
-
-To make funqual detect this issue, we use two type qualifiers: \lstinline{preemptive} which applies to signal handlers, and \lstinline{non_reentrant} which applies to nonreenreant functions.  We also create one rule: $restrict\_indirect\_call(preemptive, non\_reentrant)$.  Since many of the nonreentrant functions we are concerned about are in the gnu library, we will annotate those functions as \lstinline{non_reentrant} in the rules file.  Listing \ref{lst:app:reentrancy:rules} shows the rules file used.  The list of functions tagged as nonreentrant is incomplete but represents the ones used in this program.  In addition to tagging nonreentrant library functions in the rules file, we will also tag the signal handlers in code as \lstinline{preemptive}.  Listing \ref{lst:app:reentrancy:handlers} shows the two lines that were added to the program source to tag signal handlers.  
-
-\noindent\begin{minipage}[t]{\linewidth}
-\begin{lstlisting}[caption={Rules file for preventing preemptive functions from calling non\_reentrant functions.  Since this rules file contains no references to project-specific functions, the file could concievably be re-used by several projects.},label={lst:app:reentrancy:rules}]
-rule restrict_indirect_call preemptive non_reentrant
-
-tag c:@F@malloc non_reentrant
-tag c:@F@free non_reentrant
-tag c:@F@printf non_reentrant
-tag c:@F@fprintf non_reentrant
-tag c:@F@sprintf non_reentrant
-tag c:@F@rand non_reentrant
-\end{lstlisting}
-\end{minipage}
-
-\noindent\begin{minipage}[t]{\linewidth}
-\begin{lstlisting}[language=c,caption={Lines inserted into C file to mark signal handlers as preemptive.},label={lst:app:reentrancy:handlers}]
-void kill_snake() QTAG(preemptive);
-void lwp_stop() QTAG(preemptive);
-\end{lstlisting}
-\end{minipage}
-
-The size of this project was 458 lines of code\footnote{Line count achieved using the \lstinline{cloc} utility not including comments or blank lines.  Unfortunately the source code for this example could not be included here for intellectual property reasons.} contained in 5 \lstinline{.c} files and with 40 edges in the call graph.  The time it took for funqual to analyze the source was about 3.5 seconds\footnote{Data collected on a T460 Lenovo Thinkpad with Quad Intel Core i5-6300U CPU at 2.4GHz.} --- 3.5 of which were spent in libClang parsing the source and an immeasurably small amount of time spent checking rules. 
-
-On the first run, funqual did not detect any call graph violations.  In order to test that the tool does actually detect errors, we manually inserted several illicit calls to \lstinline{printf}.  After doing so, we did in fact see that funqual correctly detected and reported these errors.  Listing \ref{lst:app:reentrancy:output} shows the output from funqual when run on this modified codebase.
-
-\noindent\begin{minipage}[t]{\linewidth}
-\begin{lstlisting}[caption={Output from funqual when run on a project that had manually-inserted call graph violations},label={lst:app:reentrancy:output}]
-Rule violation: `non_reentrant` function indirectly called from `preemptive` context
-        Path:   snakemain.c::lwp_stop(int) (68,14)
-        -calls: libLWP.c::get_init_context() (193,6)
-        -calls: libLWP.c::printf(const char *, ...) (362,12)
-\end{lstlisting}
-\end{minipage}
-
-As seen in Listing \ref{lst:app:reentrancy:output}, funqual successfully found a call graph violation that was manually inserted into program source.  Additionally, funqual listed the locations in code where each call occurred between the \lstinline{preemptive} and \lstinline{non_reentrant} functions.  
-
-\section{Restricting API available during initialization}\label{sec:app:pre-malloc}
-
-My OS project was annotated so I didn't accidentally call malloc or printf before those things were initialized
-
-\section{Detecting noisy calls in high frequency contexts}\label{sec:app:blocking}
-
-Robotics was annotated and checked so we didn't accidentally have printf's in high frequency functions again.
+\input{chapters/applications/blocking}

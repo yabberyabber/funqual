@@ -49,7 +49,10 @@
     frame=single
 }
  
-\lstset{style=mystyle}
+\lstset{
+	style=mystyle,
+	breakatwhitespace,
+}
 
 \usepackage{makecell}
 \usepackage{appendix}
@@ -108,6 +111,31 @@
 \crefname{app}{appendix}{appendices}
 \Crefname{app}{Appendix}{Appendices}
 
+
+\makeatletter
+\renewcommand\lstlistoflistings{%
+	\newpage
+    \if@twocolumn
+      \@restonecoltrue\onecolumn
+    \else
+      \@restonecolfalse
+    \fi
+    \addcontentsline{toc}{chapter}{LIST OF LISTINGS}
+    \begin{center}
+      \MakeUppercase{List of Listings} \\[1.5ex]
+     % CHAPTER \hfill{} PAGE
+    \end{center}
+
+	Listing \hfill Page
+
+    %\chapter*{\contentsname
+    %    \@mkboth{%
+    %       \MakeUppercase\contentsname}{\MakeUppercase\contentsname}}%
+    \@starttoc{lol}%
+    \if@restonecol\twocolumn\fi
+    }
+\makeatother
+
 \begin{document}
 
 % Declarations for Front Matter
@@ -136,6 +164,8 @@
 \listoftables
 
 \listoffigures
+
+\lstlistoflistings
 
 % Add CHAPTER into table of contents.
 \addtocontents{toc}{%

@@ -121,15 +121,18 @@ Rule violation: `dynamic_memory` function indirectly called from `static_memory`
 \end{lstlisting}
 \end{minipage}
 
+Funqual will, by default, output every illegal path in a program.  This has the potential to generate a lot of ourput for larger programs with many violations.  
+
 \section{Practical Limitations}
 
-Because of complexities in parsing C++, certain applications of function pointers are not currently checkable by funqual.  Specifically, any expression where the lvalue in a function pointer assignment is anything other than a raw variable is not supported.  Listing \ref{sec:imp:funptrfails} shows a few examples of assignment expressions that funqual cannot check correctly.
+Because of complexities in parsing C++, certain applications of function pointers are not currently checkable by funqual.  Specifically, any expression where the lvalue or rvlaue in a function pointer assignment is anything other than a raw variable can not be checked.  Listing \ref{sec:imp:funptrfails} shows a few examples of assignment expressions that funqual cannot check correctly.
 
 \noindent\begin{minipage}[t]{\linewidth}
 \begin{lstlisting}[language=c++,label={sec:imp:funptrfails},caption={Examples of function pointer assignment expressions that are not checked correctly by funqual}]
 void *(**array)(size_t size) QTAG(dynamic_memory);
 
-array[0] = malloc; //assignment not checkable
+//assignment not checkable because the array dereference in lvalue
+array[0] = malloc;
 
 struct {
     void *(*field)(size_t size);
@@ -137,8 +140,16 @@ struct {
 
 struct structure s;
 
-s.field = malloc; //assignment not checkable
+//assignment not checkable because of field dereference in lvalue
+s.field = malloc;
+
+void *(**arr)(size_t);
+
+//assignment not checkable because of array dereference in rvalue
+arr = array[0];
 \end{lstlisting}
 \end{minipage}
 
-Additionally, if the source code being checked contains any syntax errors, funqual will fail to check the program and will print one of the syntax errors in the program.  This functionality is provided by libClang which we use to parse program source.  
+The difficulty here arises from determining the type of an expression using the libClang api.  Types containing function pointers can be annotated by inserting \lstinline{QTAG} and \lstinline{QTAG_IND} annotations.  Additionally, the type of any expression in the libClang AST can be queried.  However, the type returned by libClang when querying for the type of an expression will not contain type qualifier annotations.  In order to get the type annotations for lvalues and rvalues in an assignment, funqual needs to look up the declaration of the identifier and parse it.  Types in C++ can be arbitrarily nested and function pointers can be hidden within complicated types.  In order to limit complexity of the funqual tool, a decision was made that funqual would only support assignments to and from raw identifiers.  
+
+For the same reason, funqual does not support casting function types to coerce them into having certain type qualifiers.  When determining the type of the result of a cast expression, libClang ignores the type qualifier annotations and so the cast expression loses that information after parsing.  

@@ -28,7 +28,7 @@ void lwp_stop() QTAG(preemptive);
 \end{lstlisting}
 \end{minipage}
 
-The size of this project was 458 lines of code\footnote{Line count achieved using the \lstinline{cloc} utility not including comments or blank lines.} contained in five \lstinline{.c} files with 40 edges in the call graph.  Funqual analyzed the source in about 2.9 seconds\footnote{Data collected on a T460 Lenovo Thinkpad with Quad Intel Core i5-6300U CPU at 2.4GHz.} --- 2.1 seconds were spent in libClang parsing the source, 0.8 seconds were spent traversing the AST to generate the call graph, 0.00001 seconds were spent checking all the call graph, and 0.00001 seconds were spent checking assignments. 
+The size of this project was 458 lines of code\footnote{Line count achieved using the \lstinline{cloc} utility not including comments or blank lines.} contained in five \lstinline{.c} files with 40 edges in the call graph.  Funqual analyzed the source in about 0.9 seconds\footnote{Data collected on a T460 Lenovo Thinkpad with Quad Intel Core i5-6300U CPU at 2.4GHz.} --- 0.1 seconds were spent in libClang parsing the source, 0.8 seconds were spent traversing the AST to generate the call graph, 0.00001 seconds were spent checking all the call graph, and 0.00001 seconds were spent checking assignments. 
 
 On the first run, funqual did not detect any call graph violations.  In order to test that the tool does actually detect errors, several illicit calls to \lstinline{printf} were inserted.  After doing so, funqual correctly detected and reported these errors.  Listing \ref{lst:app:reentrancy:output} shows the output from funqual when run on this modified codebase.
 

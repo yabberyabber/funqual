@@ -4,44 +4,62 @@ Kernel development is complicated for a variety of reasons.  One reason that mak
 
 To demonstrate how funqual can be applied to this problem, we take an assignment for Operating Systems II (CSC454) where students develop their own simple x86\_64 kernel, and augment it with function type qualifiers and a rules file.  The kernel consists of several subsystems that are each initialized in sequence.  These subsystems, in order, are: a VGA subsystem to display text on the screen, a PC2 subsystem to poll the keyboard and mouse for input, a subsystem to schedule interrupts and register interrupt handlers, an interface to send and receive text over the system's serial interface, a memory manager to allocate physical pages and add them to the page table, a scheduler to run multiple processes, and lastly a set of processes which each draw a snake crawling around the screen like in section \ref{sec:app:reentrancy}.  These subsystems all depend on things in the previous subsystems.  The keyboard subsystem depends on the VGA subsystem to display the keys the user pressed, the physical memory manager depends on the interrupt subsystem to listen for page faults, \lstinline{malloc} depends on the memory manager, and so on.  It is very easy in the early stages of boot-up to accidentally call a function in a subsystem that has not been initialized.  Sometimes these calls are hidden by a few edges in the call graph, making it hard for a human to detect them.  
 
-To solve this problem, we use several type qualifiers:  \lstinline{pre_vga}, \lstinline{vga}, \lstinline{pre_pc2}, \lstinline{pc2}, \lstinline{pre_irq}, \lstinline{irq}, \lstinline{pre_ser}, \lstinline{ser}, \lstinline{pre_mmu}, \lstinline{mmu}, \lstinline{pre_proc}, and \lstinline{proc}.  We also create rules for each subsystem that prevent functions tagged \lstinline{pre_XXX} from calling functions tagged \lstinline{XXX}.  Listing \ref{lst:app:pre-malloc:rules} shows the rules file used to support this.  
+To solve this problem, we use several type qualifiers:  \lstinline{pre_vga}, \lstinline{vga}, \lstinline{pre_pc2}, \lstinline{pc2}, \lstinline{pre_irq}, \lstinline{irq}, \lstinline{pre_ser}, \lstinline{ser}, \lstinline{pre_mmu}, \lstinline{mmu}, \lstinline{pre_proc}, and \lstinline{proc}.  We also create rules for each subsystem that prevent functions tagged \lstinline{pre_XXX} from calling functions in any of the subsystems that involve \lstinline{XXX}.  Listing \ref{lst:app:pre-malloc:rules} shows the rules file used to support this.  
+
+The subsystems are initialized in the following order: VGA, PC2, Interrupt Request (IRQ), Serial, Memory Management Unit (MMU), and process manager (proc).  For each subsystem, there is an \lstinline{_init} function which is called to set the subsystem up.  The \lstinline{_init} function for each subsystem is annotated with \lstinline{pre_XXX} for each subsystem that it proceeds.  Listing \ref{lst:app:pre-malloc:annote} shows the annotations that were added to accomplish this.
 
 \noindent\begin{minipage}[t]{\linewidth}
 \begin{lstlisting}[caption={Rules file for a simple kernel written for CSC454.  The rules written here are intended to prevent code which runs before a subsystem is initialized from calling any function that depend on the subsystem.},label={lst:app:pre-malloc:rules}]
 rule restrict_indirect_call pre_vga vga
+rule restrict_indirect_call pre_vga pc2
+rule restrict_indirect_call pre_vga irq
+rule restrict_indirect_call pre_vga ser
+rule restrict_indirect_call pre_vga mmu
+rule restrict_indirect_call pre_vga proc
+
 rule restrict_indirect_call pre_pc2 pc2
+rule restrict_indirect_call pre_pc2 irq
+rule restrict_indirect_call pre_pc2 ser
+rule restrict_indirect_call pre_pc2 mmu
+rule restrict_indirect_call pre_pc2 proc
+
 rule restrict_indirect_call pre_irq irq
+rule restrict_indirect_call pre_irq ser
+rule restrict_indirect_call pre_irq mmu
+rule restrict_indirect_call pre_irq proc
+
 rule restrict_indirect_call pre_ser ser
+rule restrict_indirect_call pre_ser mmu
+rule restrict_indirect_call pre_ser proc
+
 rule restrict_indirect_call pre_mmu mmu
+rule restrict_indirect_call pre_mmu proc
+
 rule restrict_indirect_call pre_proc proc
 \end{lstlisting}
 \end{minipage}
 
-The subsystems are initialized in the following order: VGA, PC2, Interrupt Request (IRQ), Serial, Memory Management Unit (MMU), and process manager (proc).  For each subsystem, there is an \lstinline{_init} function which is called to set the subsystem up.  The \lstinline{_init} function for each subsystem is annotated with \lstinline{pre_XXX} for each subsystem that it proceeds.  Listing \ref{lst:app:pre-malloc:annote} shows the annotations that were added to accomplish this.
+% separator between 2 listings
 
-\noindent\begin{lstlisting}[language=c++,caption={Lines inserted into C source for a simple kernel in order to prevent subsystems from depending on interfaces not yet initialized.},label={lst:app:pre-malloc:annote}]
+\noindent\begin{minipage}[t]{\linewidth}
+\begin{lstlisting}[language=c++,caption={Lines inserted into C source for a simple kernel in order to prevent subsystems from depending on interfaces not yet initialized.},label={lst:app:pre-malloc:annote}]
 // for VGA subsystem
-bool VGA_init() QTAG(pre_pc2) QTAG(pre_irq) QTAG(pre_ser) QTAG(pre_mmu) QTAG(pre_proc);
+bool VGA_init() QTAG(pre_pc2);
 void set_char_at(int row, int col, char character, char attributes)
-    QTAG(vga) QTAG(pre_pc2) QTAG(pre_irq) QTAG(pre_ser) QTAG(pre_mmu) QTAG(pre_proc);
+    QTAG(vga) QTAG(pre_pc2);
 
 // for PC2 subsystem
-void PC2_init()
-    QTAG(pre_irq) QTAG(pre_ser) QTAG(pre_mmu) QTAG(pre_proc);
-bool get_char(char *ret)
-    QTAG(pc2) QTAG(pre_irq) QTAG(pre_ser) QTAG(pre_mmu) QTAG(pre_proc);
+void PC2_init() QTAG(pre_irq);
+bool get_char(char *ret) QTAG(pc2) QTAG(pre_irq);
 
 // for interrupt request subsystem
-void IRQ_init()
-    QTAG(pre_ser) QTAG(pre_mmu) QTAG(pre_proc);
+void IRQ_init() QTAG(pre_ser);
 void IRQ_set_handler(int irq, irq_handler_t handler, void *args)
-    QTAG(irq) QTAG(pre_ser) QTAG(pre_mmu) QTAG(pre_proc);
+    QTAG(irq) QTAG(pre_ser);
 
 // for serial subsystem
-void SER_init()
-    QTAG(pre_mmu) QTAG(pre_proc);
-int SER_write(const char *buff, int len)
-    QTAG(ser) QTAG(pre_mmu) QTAG(pre_proc);
+void SER_init() QTAG(pre_mmu);
+int SER_write(const char *buff, int len) QTAG(ser) QTAG(pre_mmu);
 
 // for memory management unit subsystem
 void MMU_pt_init() QTAG(pre_proc);
@@ -54,8 +72,9 @@ Process_t *PROC_create_kthread(kproc_t entry_point, void *arg)
     QTAG(proc);
 void PROC_run() QTAG(proc);
 \end{lstlisting}
+\end{minipage}
 
-This project contained 6034 lines of C code spread over 36 files with 291 edges in the call graph\footnote{Line count achieved using the \lstinline{cloc} utility not including comments or blank lines.  Many of these lines were machine-generated.}.  Funqual analyzed this source in about 6.5 seconds.  Almost all of this time was spent parsing the program source --- fewer than 0.000005 seconds were spent on checking assignments and checking the call graphs.  
+This project contained 6034 lines of C code spread over 36 files with 291 edges in the call graph\footnote{Line count achieved using the \lstinline{cloc} utility not including comments or blank lines.  Many of these lines were machine-generated.}.  Funqual analyzed this source in about 2.2 seconds --- 0.3 seconds were spend in libClang parsing source files, 1.9 seconds were spent building the call graph, less than 0.000,05 seconds were spent checking the call graph, and less than 0.000,05 seconds were spent checking function pointer assignments.  
 
 Funqual did detect errors in this source.  Listing \ref{lst:app:pre-malloc:output} shows the output from running funqual.  According to this output, funqual detected several cases where a \lstinline{pre_ser} function called a \lstinline{ser} function.  Specifically, \lstinline{IRQ_init} called \lstinline{printk} which eventually calls \lstinline{SER_write}.  \lstinline{printk} in this project operates just like \lstinline{printf}.  The only difference is that \lstinline{printk} outputs to both VGA and to serial.  This rule violation represents an actual error that existed in the project which was not detected until funqual found it.  Ideally, \lstinline{SER_write} just fills a buffer; this buffer is emptied when the serial port sends an interrupt requesting data.  However, if the serial interface isn't operating, that buffer might fill up causing the caller to block until space becomes available in the buffer.  If we had filled the entire 1024 character buffer before initializing the serial interface, the kernel would have hanged indefinitely.
 

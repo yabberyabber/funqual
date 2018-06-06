@@ -14,6 +14,7 @@ import ast_helpers
 from call_tree import build_call_tree, merge_call_trees
 from type_augmentor import augment_types
 from assignment_checker import check_assignments
+from overrides_checker import check_overrides
 from rule_checker import check_rules
 
 logging.basicConfig( filename="dbg_output", filemode="w", level=logging.DEBUG )
@@ -30,26 +31,37 @@ def scrape_all_files( files, ext_types, options ):
     start_time = time.time()
 
     for fname in files:
+        overrideScraper = scrapers.Overrides()
+        cursorScraper = scrapers.FunctionCursors()
+        funcTypeScraper = scrapers.FunctionQualifiers()
+        funPtrTypeScraper = scrapers.FunctionPointers()
+        assScraper = scrapers.FunPtrAssignments()
+
         pre_tu_time = time.time()
         target = ast_helpers.get_translation_unit( fname, options )
 
         logging.info( "Translation unit: " + str( target.spelling ) )
-        ast_helpers.dump_ast( target.cursor, lambda x: logging.debug(x) )
+        #ast_helpers.dump_ast( target.cursor, lambda x: logging.debug(x) )
 
         tu_time += time.time() - pre_tu_time
+
+        scrapers.run_scrapers( target.cursor, 
+                [ overrideScraper, cursorScraper,
+                  funcTypeScraper, funPtrTypeScraper,
+                  assScraper ] )
 
         call_subtrees.append(
                 build_call_tree( target ) )
         override_subtrees.append(
-                scrapers.Overrides.scrape( target ) )
+                overrideScraper.get() )
         cursor_subsets.append(
-                scrapers.FunctionCursors.scrape( target ) )
+                cursorScraper.get() )
         func_type_subsets.append(
-                scrapers.FunctionQualifiers.scrape( target ) )
+                funcTypeScraper.get() )
         funcptr_type_subsets.append(
-                scrapers.FunctionPointers.scrape( target ) )
+                funPtrTypeScraper.get() )
         assignment_subsets.append(
-                scrapers.FunPtrAssignments.scrape( target ) )
+                assScraper.get() )
 
     call_tree = merge_call_trees(
             call_subtrees )
@@ -66,7 +78,10 @@ def scrape_all_files( files, ext_types, options ):
 
     call_tree.augment_with_overrides( overrides )
 
+    pre_augment_time = time.time()
     aug_func_types = augment_types( call_tree, funcptr_types, func_types )
+    post_augment_time = time.time()
+
     standard_funcs = set( [ key for key in func_types.keys() ] )
 
     all_func_types = scrapers.merge_disjoint_dicts( 
@@ -77,9 +92,12 @@ def scrape_all_files( files, ext_types, options ):
     if options.show_time:
         print( "time to parse: {:0.5f} seconds".format( tu_time ) )
         print( "time to scrape stuff: {:0.5f} seconds".format( 
-            end_time - start_time - tu_time ) )
+               end_time - start_time - tu_time ) )
+        print( "time to infer indirect type: {:0.5f} seconds".format(
+               post_augment_time - pre_augment_time ) )
 
-    return call_tree, all_func_types, cursors, assignments, standard_funcs
+    return ( call_tree, all_func_types, cursors, assignments, standard_funcs,
+             overrides )
 
 def get_violations( files, tagsfile, options ):
 
@@ -90,7 +108,8 @@ def get_violations( files, tagsfile, options ):
       all_func_types,
       cursors,
       assignments,
-      standard_funcs ) = scrape_all_files( files, ext_types, options )
+      standard_funcs,
+      overrides ) = scrape_all_files( files, ext_types, options )
     post_file_parse = time.time()
 
     rule_violations = check_rules(
@@ -101,6 +120,10 @@ def get_violations( files, tagsfile, options ):
             assignments, all_func_types )
     post_assignment_checking = time.time()
 
+    override_violations = check_overrides(
+            overrides, all_func_types )
+    post_overrides_checking = time.time()
+
     if options.show_time:
         print( "Time to parse files: {:0.3f} Seconds".format(
             post_file_parse - pre_file_parse ) )
@@ -108,12 +131,16 @@ def get_violations( files, tagsfile, options ):
             post_rule_checking - post_file_parse ) )
         print( "Time to check assignments: {:0.5f} Seconds".format(
             post_assignment_checking - post_rule_checking ) )
+        print( "Time to check overrides: {:0.5f} Seconds".format(
+            post_overrides_checking - post_assignment_checking ) )
         print( "Functions examined (includes libraries and ptrs): {}".format(
             len( all_func_types ) ) )
         print( "Calls examined: {}".format( call_tree.size() ) )
 
     return ( cursors, all_func_types,
-             chain( assignment_violations, rule_violations ) )
+             chain( assignment_violations,
+                    rule_violations,
+                    override_violations ) )
 
 def main( files, options ):
     cursors, types, violations = get_violations(

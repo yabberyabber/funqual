@@ -67,3 +67,26 @@ class RuleViolation( BaseViolation ):
         if self.rule.message:
             ret += "\tRule-specific message: {0}\n".format( self.rule.message )
         return ret
+
+
+class OverrideViolation( BaseViolation ):
+    def __init__( self, overridden_method, overrider_method ):
+        self.overridden_method = overridden_method
+        self.overrider_method = overrider_method
+
+    def render_string( self, func_cursors, fun_types ):
+        overridden_name = get_human_name( func_cursors[ self.overridden_method ] )
+        overrider_name = get_human_name( func_cursors[ self.overrider_method ] )
+
+        overridden_type = fun_types.get( self.overridden_method, set() )
+        overrider_type = fun_types.get( self.overrider_method, set() )
+
+        return """Override Violation:
+\t{} overrides {} but their direct types don't match.
+\t - {} has type {}
+\t - {} has type {}
+""".format( overrider_name, overridden_name,
+            overrider_name, 
+            set( [ x[1] for x in overrider_type if x[0] == AnnotationKind.DIRECT ] ),
+            overridden_name,
+            set( [ x[1] for x in overridden_type if x[0] == AnnotationKind.DIRECT ] ) )

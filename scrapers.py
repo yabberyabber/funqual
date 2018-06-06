@@ -84,21 +84,25 @@ def sloppy_merge_dicts( dicts ):
 
     return result
 
+def run_scrapers( tu, scrapers ):
+    for trav in tu.walk_preorder():
+        for scraper in scrapers:
+            scraper.scrape( trav )
 
 class FunctionPointers:
-    @staticmethod
-    def scrape( tu ):
+    def __init__( self ):
+        self.funptrs = {}
+
+    def scrape( self, trav ):
         """
-        Given a translation unit, scrape a mapping of function pointers to their
+        Given a node in a tu, scrape a mapping of function pointers to their
         qualified types
         """
-        funptrs = {}
+        if trav.kind == CursorKind.VAR_DECL:
+            self.funptrs[ trav.get_usr() ] = get_qualifiers( trav )
 
-        for trav in tu.cursor.walk_preorder():
-            if trav.kind == CursorKind.VAR_DECL:
-                funptrs[ trav.get_usr() ] = get_qualifiers( trav )
-
-        return funptrs
+    def get( self ):
+        return self.funptrs
 
     merge = merge_overlapping_dicts
 
@@ -108,22 +112,23 @@ class FunctionQualifiers():
     Contains helper methods for scraping the function qualifiers out of
     a set of translation units
     """
-    @staticmethod
-    def scrape( tu ):
+    def __init__( self ):
+        self.func_tags = defaultdict( lambda: set() )
+
+    def scrape( self, trav ):
         """
-        Given a translation unit, scrape a mapping of function/methods to their
+        Given a node in a tu, scrape a mapping of function/methods to their
         qualified types (direct type only)
         """
-        func_tags = defaultdict( lambda: set() )
 
-        for trav in tu.cursor.walk_preorder():
-            if trav.kind in [ CursorKind.FUNCTION_DECL, CursorKind.CXX_METHOD ]:
-                full_name = trav.get_usr()
-                qualifiers = get_qualifiers( trav )
+        if trav.kind in [ CursorKind.FUNCTION_DECL, CursorKind.CXX_METHOD ]:
+            full_name = trav.get_usr()
+            qualifiers = get_qualifiers( trav )
 
-                func_tags[ full_name ] |= qualifiers
+            self.func_tags[ full_name ] |= qualifiers
 
-        return dict( func_tags ) 
+    def get( self ):
+        return dict( self.func_tags )
 
     @staticmethod
     def merge( mappings ):
@@ -142,28 +147,29 @@ class FunctionCursors:
     set of translation units
     """
 
-    @staticmethod
-    def scrape( tu ):
+    def __init__( self ):
+        self.func_cursors = {}
+
+    def scrape( self, trav ):
         """
-        Given a translation unit, scrape a mapping of function usr to the 
+        Given a node in a tu, scrape a mapping of function usr to the 
         cannonical cursor (we need to be able to retrieve the cursor later
         for error reporting)
         """
-        func_cursors = {}
+        if trav.kind in [ CursorKind.FUNCTION_DECL, CursorKind.CXX_METHOD ]:
+            full_name = trav.get_usr()
+            cursor = trav.canonical
 
-        for trav in tu.cursor.walk_preorder():
-            if trav.kind in [ CursorKind.FUNCTION_DECL, CursorKind.CXX_METHOD ]:
-                full_name = trav.get_usr()
-                cursor = trav.canonical
+            self.func_cursors[ full_name ] = cursor
+        if ( trav.kind in [ CursorKind.VAR_DECL ]
+             and is_function_pointer( trav ) ):
+            full_name = trav.get_usr()
+            cursor = trav.canonical
 
-                func_cursors[ full_name ] = cursor
-            if ( trav.kind in [ CursorKind.VAR_DECL ]
-                 and is_function_pointer( trav ) ):
-                full_name = trav.get_usr()
-                cursor = trav.canonical
+            self.func_cursors[ full_name ] = cursor
 
-                func_cursors[ full_name ] = cursor
-        return func_cursors
+    def get( self ):
+        return self.func_cursors
 
     merge = sloppy_merge_dicts
 
@@ -174,23 +180,23 @@ class Overrides:
     translation unit and merging together override mappings from
     multiple translation units.
     """
-    @staticmethod
-    def scrape( tu ):
+    def __init__( self ):
+        self.overrides = defaultdict( lambda: set() )
+
+    def scrape( self, trav ):
         """
         Scrape a translation unit and generate a mapping of methods to the 
         methods that override them
         """
-        overrides = defaultdict( lambda: set() )
+        if trav.kind == CursorKind.CXX_METHOD:
+            to_visit = list( trav.get_overridden_cursors() )
+            while to_visit:
+                overridden = to_visit.pop()
+                self.overrides[ overridden.get_usr() ].add( trav.get_usr() )
+                to_visit += list( overridden.get_overridden_cursors() )
 
-        for trav in tu.cursor.walk_preorder():
-            if trav.kind == CursorKind.CXX_METHOD:
-                to_visit = list( trav.get_overridden_cursors() )
-                while to_visit:
-                    overridden = to_visit.pop()
-                    overrides[ overridden.get_usr() ].add( trav.get_usr() )
-                    to_visit += list( overridden.get_overridden_cursors() )
-
-        return overrides
+    def get( self ):
+        return self.overrides
 
     @staticmethod
     def merge( override_maps ):
@@ -242,30 +248,30 @@ class FunPtrAssignments:
             return False
 
 
-    @classmethod
-    def scrape( cls, tu ):
+    def __init__( self ):
+        self.results = []
+
+    def scrape( self, trav ):
         """
         Scrape a single translation unit for all assignments into function
         pointers.  Grab usr so they can be typechecked.
         Return list of tuples in the following format:
           ( lvalue usr, rvalue usr, cursor of assignment for error reporting )
         """
-        results = []
+        if ( trav.kind == CursorKind.BINARY_OPERATOR and
+             len( list( trav.get_children() ) ) == 2 ):
+            try:
+                if ( self.get_operator( trav ) == '=' and
+                     self.is_lvalue_funptr( trav ) ):
+                    self.results.append(
+                            ( self.get_lvalue( trav ).get_usr(),
+                              self.get_rvalue( trav ).get_usr(),
+                              trav.canonical ) )
+            except:
+                pass
 
-        for trav in tu.cursor.walk_preorder():
-            if ( trav.kind == CursorKind.BINARY_OPERATOR and
-                 len( list( trav.get_children() ) ) == 2 ):
-                try:
-                    if ( cls.get_operator( trav ) == '=' and
-                         cls.is_lvalue_funptr( trav ) ):
-                        results.append(
-                                ( cls.get_lvalue( trav ).get_usr(),
-                                  cls.get_rvalue( trav ).get_usr(),
-                                  trav.canonical ) )
-                except:
-                    pass
-
-        return results
+    def get( self ):
+        return self.results
 
     @classmethod
     def merge( cls, lists_of_assignments ):

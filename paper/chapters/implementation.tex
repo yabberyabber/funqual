@@ -4,7 +4,7 @@ This section contains information about the funqual tool including a discussion 
 
 \section{Operation}\label{sec:operation}
 
-Funqual is a tool that takes in C++ source code and a set of call graph rules and outputs a list of rule violations, if any exist.  Section \ref{sec:operate:annote} demonstrates how to annotate C++ source code with funqual type qualifiers.  Section \ref{sec:operate:rules} explains the syntax for writing down rules in the rules file.  Section \ref{sec:operate:run} shows the syntax for running funqual from the command line.  Finally, Section \ref{sec:operate:output} contains a few examples of programs, rule files, and the output from funqual.  
+Funqual is a tool that takes in C++ source code and a set of call graph rules and outputs a list of rule violations, if any exist.  Section \ref{sec:operate:annote} demonstrates how to annotate C++ source code with funqual type qualifiers.  Section \ref{sec:operate:rules} explains the syntax for writing down rules in the rules file.  Section \ref{sec:operate:run} shows the syntax for running funqual from the command line.  Finally, Section \ref{sec:operate:output} contains a few examples of programs, rules files, and the output from funqual.  
 
 \subsection{Function Qualifier Annotations with QTAG and QTAG\_IND}\label{sec:operate:annote}
 
@@ -26,7 +26,7 @@ For clarity and convenience we assume the following macros are in scope.  These 
 \end{lstlisting}
 \end{minipage}
 
-Note that the \lstilnine{\_\_attribute\_\_((annotate(foobar)))} syntax is generally used for compiler-specific directives (like packed, align(8), noreturn, etc) and that attributes unknown by the compiler are simply ignored.  This allows us to insert information into the AST that is available after parsing but which will not effect compilation.
+Note that the \lstilnine{\_\_attribute\_\_((annotate(foobar)))} syntax is generally used for compiler-specific directives (like packed, align(8), noreturn, etc) and that attributes unknown by the compiler are simply ignored.  This allows us to insert information into the AST that is available after parsing but which will not affect compilation.
 
 Below is an example of the syntax for adding type qualifiers to a function.  The function below has two qualified types: \lstinline{static_memory} and \lstinline{no_io}.
 
@@ -38,7 +38,7 @@ int main() QTAG(static_memory) QTAG(no_io) {
 \end{lstlisting}
 \end{minipage}
 
-Below is an example of the syntax for adding type qualifiers to a method prototype inline a class.  The function below has qualified type \lstinline{static_memory}.
+Below is an example of the syntax for adding type qualifiers to a method prototype within a class.  The function below has qualified type \lstinline{static_memory}.
 
 \noindent\begin{minipage}[t]{\linewidth}
 \begin{lstlisting}[language=C++]
@@ -76,7 +76,7 @@ int QTAG_IND(blocking) (*func)(int, int);
 
 \subsection{Constrain the World!  Writing a Rules File}\label{sec:operate:rules}
 
-Call graph rules are inserted into special files called rule files.  By convention, rule files have the file extention \lstinline{.qtag} but this convention is optional.  Below is an example of a rules file that shows a few examples of each rule type:
+Call graph rules are inserted into special files called rules files.  By convention, rules files have the file extention \lstinline{.qtag} but this convention is optional.  Below is an example of a rules file that shows a few examples of each rule type:
 
 \noindent\begin{minipage}[t]{\linewidth}
 \begin{lstlisting}
@@ -100,7 +100,7 @@ tag c:@F@malloc dynamic_memory
 
 \subsection{Running Funqual}\label{sec:operate:run}
 
-Funqual can be run from the command line.  There are two kinds of arguments:  translation units and rules files.  Arguments proceeded by \lstinline{-t} or \lstinline{--tags-file} will be interpreted as a rules file.  All other arguments will be interpreted as a translation unit.  Funqual needs to be passed every translation unit in a project in order for it to create a representative call graph for the codebase.  Below is an example command for running funqual.  This command will pass in every \lstinline{.cpp} file in the current directory and any subdirectories and will also pass in a rules file called \lstinline{rules.qtag} in the current directory.
+Funqual can be run from the command line.  There are two kinds of arguments:  translation units and rules files.  Arguments preceeded by \lstinline{-t} or \lstinline{--tags-file} will be interpreted as a rules file.  All other arguments will be interpreted as translation units.  Funqual needs to be passed every translation unit in a project in order for it to create a representative call graph for the codebase.  Below is an example command for running funqual.  This command will pass in every \lstinline{.cpp} file in the current directory and any subdirectories and will also pass in a rules file called \lstinline{rules.qtag} in the current directory.
 
 \noindent\begin{minipage}[t]{\linewidth}
 \begin{lstlisting}

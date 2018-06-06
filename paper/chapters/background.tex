@@ -16,7 +16,7 @@ The focus of this paper is on creating and analyzing type qualifiers for functio
 
 A program's call graph is a directed graph where each function is a vertex and where each call is an edge directed from the caller to the callee.  The type qualifiers in this context are applied to the vertices and the things we wish to constrain are connections between vertices.  Below is an example of a C program and its associated call graph.
 
-\begin{minipage}[c]{0.95\textwidth}
+\noindent\begin{minipage}[c]{0.95\textwidth}
 \begin{lstlisting}[language=C,caption={Example C program.  The call graph for this program is shown in Figure \ref{fig:pandacallgraph}},label={lst:pandasource}]
 int breed_and_release_pandas() {
     Panda *baby_panda = malloc(sizeof(Panda));
@@ -51,5 +51,5 @@ int main(void) {
 As demonstrated in Figure \ref{fig:pandacallgraph}, every function in the source code has a vertex in the graph and every function call in the source code has an edge in the graph.  If there is a call from function $X$ to function $Y$ in the source code, there will be an edge pointing from node $X$ to node $Y$ in the associated call graph. 
 
 \begin{sloppypar}
-This graph representation makes it easy to reason about the program algorithmically.  Does \lstinline{main} contain a call to \lstinline{breed_and_release_pandas}?  No.  You can tell because there is no edge from \lstinline{main} to \lstinline{breed_and_release_pandas}.  Does \lstinline{breed_and_release_pandas} contain a call to \lstinline{release_panda}?  Yes.  You can tell because there is an edge from \lstinline{breed_and_release_pandas} to \lstinline{release_panda}.  Does \lstinline{save_the_pandas} indirectly call \lstinline{malloc}?  Yes.  You can tell because there is a path from \lstinline{save_the_pandas} to \lstinline{malloc}.  Thanks to the call graph, questions about what functions call what boil down to classic path finding algorithms.  
+This graph representation makes it easy to reason about the program algorithmically.  Does \lstinline{main} contain a call to \lstinline{breed_and_release_pandas}?  No.  You can tell because there is no edge from \lstinline{main} to \lstinline{breed_and_release_pandas}.  Does \lstinline{breed_and_release_pandas} contain a call to \lstinline{release_panda}?  Yes.  You can tell because there is an edge from \lstinline{breed_and_release_pandas} to \lstinline{release_panda}.  Does \lstinline{save_the_pandas} indirectly call \lstinline{malloc}?  Yes.  You can tell because there is a path from \lstinline{save_the_pandas} to \lstinline{malloc}.  Thanks to the call graph, questions about which functions call which functions boil down to classic path finding algorithms.  
 \end{sloppypar}

@@ -142,17 +142,7 @@ def get_violations( files, tagsfile, options ):
                     rule_violations,
                     override_violations ) )
 
-def main( files, options ):
-    cursors, types, violations = get_violations(
-            files, options.tags_file, options )
-
-    for violation in violations:
-        print(
-                violation.render_string(
-                    cursors, types ) )
-        print()
-
-if __name__ == '__main__':
+def parse_args():
     parser = OptionParser()
 
     parser.add_option( "-t", "--tags-file", dest="tags_file",
@@ -188,9 +178,25 @@ if __name__ == '__main__':
                        help="Output execution time for different phases of prgm",
                        default=False )
 
-    ( options, args ) = parser.parse_args()
+    ( options, files ) = parser.parse_args()
 
     if len( sys.argv ) == 1:
         parser.print_help( sys.stderr )
-    else:
-        main( args, options )
+        sys.exit( 0 )
+
+    return ( options, files )
+
+def main():
+    options, files = parse_args()
+
+    cursors, types, violations = get_violations(
+            files, options.tags_file, options )
+
+    for violation in violations:
+        print(
+                violation.render_string(
+                    cursors, types ) )
+        print()
+
+if __name__ == '__main__':
+    main()

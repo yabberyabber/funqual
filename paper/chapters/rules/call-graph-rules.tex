@@ -44,9 +44,8 @@ In the case of the function pointer call, we need to also examine all possible a
 
 A restrict indirect call rule creates a constraint that functions with direct type $X$ cannot call functions with direct or indirect type $Y$.  This has the effect of restricting functions with direct type $X$ from calling functions with direct type $Y$, whether that call is direct or indirect.  The need to enforce indirect calls in the presence of function pointers requires us to examine the indirect type of the callee for each edge.  
 
-Listing \ref{lst:rules:rules:restrict_indirect_call} shows pseudocode for an algorithm that can check a call graph for violations of this rule.  Assume that \lstinline{edges} is a list of objects representing all the calls in the call graph.  
-
-\noindent\begin{lstlisting}[caption={Pseudocode for an algorithm that can check a $restrict\_indirect\_call$ constraint.  This algorithm returns \lstinline{true} if the call graph respects the constraint and \lstinline{false} if the call graph violates it.},label={lst:rules:rules:restrict_indirect_call}]
+\noindent \begin{minipage}[t]{\linewidth}
+\begin{lstlisting}[caption={Pseudocode for an algorithm that can check a $restrict\_indirect\_call$ constraint.  This algorithm returns \lstinline{true} if the call graph respects the constraint and \lstinline{false} if the call graph violates it.},label={lst:rules:rules:restrict_indirect_call}]
 function enforce_restrict_indirect_call(X, Y, edges):
     for edge in edges:
         callee = edge.to
@@ -56,6 +55,9 @@ function enforce_restrict_indirect_call(X, Y, edges):
             return false
     return true
 \end{lstlisting}
+\end{minipage}
+
+Listing \ref{lst:rules:rules:restrict_indirect_call} shows pseudocode for an algorithm that can check a call graph for violations of this rule.  Assume that \lstinline{edges} is a list of objects representing all the calls in the call graph.  
 
 In order to simplify this algorithm, we will assume for the time being that indirect function types are inferred correctly.  For an explanation of the indirect type inference algorithm and for an argument for its correctness, refer to Subsection \ref{sec:rules:rules:inference}.  To assert the correctness of \lstinline{enforce_restrict_indirect_call}, we will again consider each function call in the graph as a member of one of two categories: a call to a standard function, or an invocation of a function pointer.
 

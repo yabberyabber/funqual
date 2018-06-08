@@ -26,3 +26,5 @@ dbg_output
 *.ilg
 *.lot
 .cache*
+*.bak
+*.lol

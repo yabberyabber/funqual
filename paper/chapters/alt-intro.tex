@@ -4,10 +4,10 @@ Writing bug-free software is challenging if not impossible.  In the past 30 year
 
 While these tools are extremely helpful in finding bugs in code, they are by no means complete.  Every tool uses a finite set of techniques to detect a specific class of issues.  Some tools examine the types of values and expressions to enforce type safety\cite{staticanal}, some tools examine ownership of objects to enforce memory safety\cite{rust-is-dope}, some tools examine the flow of values through a program to ensure security\cite{jqual-inference}, and many other tools do other things entirely.  
 
-This paper intends to add a new technique to the existing arsenal.  This tool makes it possible to check for errors which were previously undetectable.  To motivate this technique, we provide a problematic example.  Listing \ref{lst:intro:bug} contains a snippet of C code that has a bug in it --- the reader is challenged to find it:
+This paper intends to add a new technique to the existing arsenal.  This tool makes it possible to check for errors which were previously undetectable.  To motivate this technique, we provide a problematic example.  Figure \ref{lst:intro:bug} contains a snippet of C code that has a bug in it --- the reader is challenged to find it.
 
-\noindent\begin{minipage}[c]{0.95\textwidth}
-\begin{lstlisting}[language=C,label={lst:intro:bug},caption={Example piece of C code containing an error}]
+\begin{figure}
+\begin{lstlisting}[language=C]
 #include <stdio.h>
 #include <signal.h>
 #include <unistd.h>
@@ -29,8 +29,11 @@ int main(void) {
     }
 }
 \end{lstlisting}
-\end{minipage}
+    \caption{Example piece of C code containing an error}
+    \label{lst:intro:bug}
+\end{figure}
 
+\newpage
 Most well-seasoned C and C++ programmers would be at a loss to find the error --- and the error certainly is obscure.  A quotation from the glibc library reference may be helpful here:
 
 \begin{quote}

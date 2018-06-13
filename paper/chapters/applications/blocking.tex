@@ -8,63 +8,69 @@ We use funqual to find and report these issues.  To do this, we use two type qua
 
 An alternative approach which we abandoned because of increased burden on the programmer is to use just one function qualifier, \lstinline{fast}, and one rule, $require\_direct\_call(\allowbreak fast, fast)$, to require that each function marked \lstinline{fast} only call other functions marked \lstinline{fast}.  The issue with this approach is that  functions would be guilty until proven innocent --- there are hundreds of library functions that we do use in control loops without issue and each of these would need to be marked as \lstinline{fast} before funqual would accept them.  This increases the adoption cost for this approach and requires a lot of annotation. If we were more serious about guaranteeing close to real-time performance, this approach would have been more appealing.  
 
-Listing \ref{lst:app:blocking:rules} shows the rules file that was written to accomplish this.  Several functions from various libraries are tagged in the rules file as \lstinline{slow} and there is one rule restricting \lstinline{hi_freq} functions from calling \lstinline{slow} functions.  This is not an exhaustive list of slow functions, but it is a representative subset of them.  
+Figure~\ref{lst:app:blocking:rules} shows the rules file that was written to accomplish this.  Several functions from various libraries are tagged in the rules file as \lstinline{slow} and there is one rule restricting \lstinline{hi_freq} functions from calling \lstinline{slow} functions.  This is not an exhaustive list of slow functions, but it is a representative subset of them.  
 
-\noindent\begin{minipage}[t]{\linewidth}
-\begin{lstlisting}[caption={Rules file for preventing high frequency functions from calling slow functions.  Several functions from standard libraries are marked in the rules file as \lstinline{slow}.},label={lst:app:blocking:rules}]
-rule restrict_indirect_call hi_freq slow
+\begin{figure}
+    \begin{lstlisting}[gobble=8]
+        rule restrict_indirect_call hi_freq slow
 
-tag c:@F@malloc slow
-tag c:@F@printf slow
-tag c:@F@fprintf slow
-tag c:@F@sprintf slow
-tag c:@N@frc@S@CameraServer@F@GetInstance#S slow
-tag c:@N@frc@S@DriverStation@F@GetInstance#S slow
-tag c:@N@frc@S@Scheduler@F@GetInstance#S slow
-tag c:@N@nt@S@NetworkTableEntry@F@GetInstance#1 slow
-tag c:@N@nt@S@NetworkTable@F@GetInstance#1 slow
-\end{lstlisting}
-\end{minipage}
+        tag c:@F@malloc slow
+        tag c:@F@printf slow
+        tag c:@F@fprintf slow
+        tag c:@F@sprintf slow
+        tag c:@N@frc@S@CameraServer@F@GetInstance#S slow
+        tag c:@N@frc@S@DriverStation@F@GetInstance#S slow
+        tag c:@N@frc@S@Scheduler@F@GetInstance#S slow
+        tag c:@N@nt@S@NetworkTableEntry@F@GetInstance#1 slow
+        tag c:@N@nt@S@NetworkTable@F@GetInstance#1 slow
+    \end{lstlisting}
+    \caption{Rules file for preventing high frequency functions from calling slow functions.  Several functions from standard libraries are marked in the rules file as \lstinline{slow}.}
+    \label{lst:app:blocking:rules}
+\end{figure}
 
-In addition to creating the rules file which contains the rule and which marks several functions as \lstinline{slow}, we also modified several lines in the source to mark certain functions as \lstinline{hi_freq}.  Listing \ref{lst:app:blocking:code} shows the lines that were added to the C++ source file in order to achieve this.  This is not an exhaustive list of high frequency functions, but it is a representative subset of them.  
+In addition to creating the rules file which contains the rule and which marks several functions as \lstinline{slow}, we also modified several lines in the source to mark certain functions as \lstinline{hi_freq}.  Figure~\ref{lst:app:blocking:code} shows the lines that were added to the C++ source file in order to achieve this.  This is not an exhaustive list of high frequency functions, but it is a representative subset of them.  
 
-\noindent\begin{minipage}[t]{\linewidth}
-\begin{lstlisting}[language=c++,caption={Lines inserted into C++ source file to mark certain functions as \lstinline{hi_freq}.},label={lst:app:blocking:code}]
-void CoopMTRobot::DisabledPeriodic() QTAG(hi_freq) override;
-void CoopMTRobot::AutonomousPeriodic() QTAG(hi_freq) override;
-void CoopMTRobot::TeleopPeriodic() QTAG(hi_freq) override;
-void CoopMTRobot::TestPeriodic() QTAG(hi_freq) override;
+\begin{figure}
+    \begin{lstlisting}[language=c++,gobble=8]
+        void CoopMTRobot::DisabledPeriodic() QTAG(hi_freq) override;
+        void CoopMTRobot::AutonomousPeriodic() QTAG(hi_freq) override;
+        void CoopMTRobot::TeleopPeriodic() QTAG(hi_freq) override;
+        void CoopMTRobot::TestPeriodic() QTAG(hi_freq) override;
 
-static void *SPIGyro::Run() QTAG(hi_freq);
+        static void *SPIGyro::Run() QTAG(hi_freq);
 
-bool SmartPixy::getStart() QTAG(hi_freq);
-\end{lstlisting}
-\end{minipage}
+        bool SmartPixy::getStart() QTAG(hi_freq);
+    \end{lstlisting}
+    \caption{Lines inserted into C++ source file to mark certain functions as \lstinline{hi_freq}.}
+    \label{lst:app:blocking:code}
+\end{figure}
 
 This codebase is big, in large part because of all the libraries we depend on for interfacing with sensors and actuators on the robot.  In the interest of time we could not check the entire codebase but rather we focused on the core libraries and the subsystems containing control loops.  The portion of the library that we checked consists of 6959 lines of C++ code spread out over 42 files.  The header files we include from other libraries consists of 12,506 lines of code spread out over 145 files.  As such, analyzing these files takes a long time.  Funqual analyzed the source in about 4 minutes --- 24 seconds were spent in libClang parsing the source, 209 seconds were spent traversing the AST building a call graph, 0.04 seconds were spent performing type inference, 0.000,02 seconds were spend checking the call graph, and less than 0.000,005 seconds were spent checking function pointer assignments.  The call graph contains 11635 vertices and 5103 edges.  Obviously due to the size of this project, it takes a long time for funqual to traverse it all.  Usually, projects using clang alleviate this by doing incremental compilation --- only the files which changed need to be examined.  Funqual does not currently support incremental linting (implementing it is certainly possible but would take significant development time).  If funqual did support incremental linting, then the time to run funqual on the codebase would be significantly reduced for most runs.  
 
-Funqual found many errors in this codebase.  Because the funqual output is so large, the entire listing is not included here, but a representative portion of the output is shown in Listing \ref{lst:app:blocking:output}.  Most of these errors relate to stray debug \lstinline{printf}s inserted into the code.  
+Funqual found many errors in this codebase.  Because the funqual output is so large, the entirety is not included here, but a representative portion of the output is shown in Figure~\ref{lst:app:blocking:output}.  Most of these errors relate to stray debug \lstinline{printf}s inserted into the code.  
 
 These calls were inserted for temporary debugging purposes and should definitely be removed.  Calls to \lstinline{printf} sometimes block for up to a few milliseconds when the output buffer gets filled and data needs to be copied somewhere else.  When a loop runs at 100Hz (10ms per cycle), a delay of a few milliseconds can slow the loop and degrade performance.  As such, these rule violations represent actual errors in the source code which were found using funqual.  
 
-\noindent\begin{minipage}[t]{\linewidth}
-\begin{lstlisting}[caption={Output of running funqual on robotics library.  This is not the entire output, but rather a small snippet of it},label={lst:app:blocking:output}]
-Rule violation: `slow` function indirectly called from `hi_freq` context
-        Path:   lib/sensors/SPIGyro.cpp::frc973::SPIGyro::Run(void *) (60,18)
-        -calls: lib/sensors/SPIGyro.cpp::frc973::SPIGyro::ReadPartID() (134,14)
-        -calls: lib/sensors/SPIGyro.cpp::frc973::SPIGyro::DoRead(uint8_t) (92,14)
-        -calls: lib/sensors/SPIGyro.cpp::frc973::SPIGyro::DoTransaction(uint32_t, uint32_t *) (128,10)
-        -calls: stdio.h::printf(const char *__restrict, ...) (362,12)
+\begin{figure}
+    \begin{lstlisting}[gobble=8]
+        Rule violation: `slow` function indirectly called from `hi_freq` context
+                Path:   lib/sensors/SPIGyro.cpp::frc973::SPIGyro::Run(void *) (60,18)
+                -calls: lib/sensors/SPIGyro.cpp::frc973::SPIGyro::ReadPartID() (134,14)
+                -calls: lib/sensors/SPIGyro.cpp::frc973::SPIGyro::DoRead(uint8_t) (92,14)
+                -calls: lib/sensors/SPIGyro.cpp::frc973::SPIGyro::DoTransaction(uint32_t, uint32_t *) (128,10)
+                -calls: stdio.h::printf(const char *__restrict, ...) (362,12)
 
-Rule violation: `slow` function indirectly called from `hi_freq` context
-        Path:   lib/sensors/SPIGyro.cpp::frc973::SPIGyro::Run(void *) (60,18)
-        -calls: lib/sensors/SPIGyro.cpp::frc973::SPIGyro::InitializeGyro() (67,10)
-        -calls: stdio.h)::printf(const char *__restrict, ...) (362,12)
+        Rule violation: `slow` function indirectly called from `hi_freq` context
+                Path:   lib/sensors/SPIGyro.cpp::frc973::SPIGyro::Run(void *) (60,18)
+                -calls: lib/sensors/SPIGyro.cpp::frc973::SPIGyro::InitializeGyro() (67,10)
+                -calls: stdio.h)::printf(const char *__restrict, ...) (362,12)
 
-Rule violation: `slow` function indirectly called from `hi_freq` context
-        Path:   lib/sensors/SPIGyro.cpp::frc973::SPIGyro::Run(void *) (60,18)
-        -calls: lib/sensors/SPIGyro.cpp::frc973::SPIGyro::InitializeGyro() (67,10)
-        -calls: lib/sensors/SPIGyro.cpp::frc973::SPIGyro::DoTransaction(uint32_t, uint32_t *) (128,10)
-        -calls: stdio.h::printf(const char *__restrict, ...) (362,12)
-\end{lstlisting}
-\end{minipage}
+        Rule violation: `slow` function indirectly called from `hi_freq` context
+                Path:   lib/sensors/SPIGyro.cpp::frc973::SPIGyro::Run(void *) (60,18)
+                -calls: lib/sensors/SPIGyro.cpp::frc973::SPIGyro::InitializeGyro() (67,10)
+                -calls: lib/sensors/SPIGyro.cpp::frc973::SPIGyro::DoTransaction(uint32_t, uint32_t *) (128,10)
+                -calls: stdio.h::printf(const char *__restrict, ...) (362,12)
+    \end{lstlisting}
+    \caption{Output of running funqual on robotics library.  This is not the entire output, but rather a small snippet of it}
+    \label{lst:app:blocking:output}
+\end{figure}

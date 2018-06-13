@@ -6,36 +6,38 @@ When calling a virtual method in C++, it is impossible to know at compile time e
 
 Let $C$ be some function that calls $T.M$ where $T$ is some class and $M$ is a virtual method of $T$.  When creating the call graph, we must surely add an edge from $C$ to $T.M$.  In addition to that, though, for any class $S$ that is a subclass of $T$, we must also add an edge from $C$ to $S.M$.  This accounts for any possible overloads of $M$ that might be called at run-time.
 
-Listing \ref{lst:rules:inheritance} demonstrates this concept.  It is a piece of C++ source code that calls a virtual function.  Figure \ref{fig:rules:inheritance} shows the call graph for this code sample.  
+Figure \ref{lst:rules:inheritance} demonstrates this concept.  It is a piece of C++ source code that calls a virtual function.  Figure \ref{fig:rules:inheritance} shows the call graph for this code sample.  
 
-\noindent\begin{minipage}[t]{\linewidth}
-\begin{lstlisting}[language=C++,caption={Example C++ program demonstrating inheritance.  In \lstinline{feedPanda}, it is impossible to know statically which instance of the \lstinline{Feed} function will be called.  Figure \ref{fig:rules:inheritance} shows the call graph for this program.},label={lst:rules:inheritance}]
-class Panda {
-protected:
-    int m_hunger;
-public:
-    virtual int Feed() {
-        m_hunger--;
-    }
-};
+\begin{figure}
+    \begin{lstlisting}[language=C++,gobble=8]
+        class Panda {
+        protected:
+            int m_hunger;
+        public:
+            virtual int Feed() {
+                m_hunger--;
+            }
+        };
 
-class RedPanda : public Panda{
-public:
-    int Feed() override {
-        Stomach *stomach = malloc(sizeof(Stomach));
-        memset(stomach, 0xFF, sizeof(Stomach));
-    }
-};
+        class RedPanda : public Panda{
+        public:
+            int Feed() override {
+                Stomach *stomach = malloc(sizeof(Stomach));
+                memset(stomach, 0xFF, sizeof(Stomach));
+            }
+        };
 
-void feedPanda(Panda *panda) static_memory {
-    panda->Feed();
-}
+        void feedPanda(Panda *panda) static_memory {
+            panda->Feed();
+        }
 
-int main(void) {
-    feedPanda(new RedPanda());
-}
-\end{lstlisting}
-\end{minipage}
+        int main(void) {
+            feedPanda(new RedPanda());
+        }
+    \end{lstlisting}
+    \caption{Example C++ program demonstrating inheritance.  In \lstinline{feedPanda}, it is impossible to know statically which instance of the \lstinline{Feed} function will be called.  Figure \ref{fig:rules:inheritance} shows the call graph for this program.}
+    \label{lst:rules:inheritance}
+\end{figure}
 
 \begin{figure}
     \centering
@@ -56,7 +58,7 @@ int main(void) {
         \draw[edge, -triangle 90, line width=0.5mm] (RedPandaFeed) to (malloc);
         \draw[edge, -triangle 90, line width=0.5mm] (RedPandaFeed) to (memset);
     \end{tikzpicture}
-    \caption{Call graph for Listing \ref{lst:rules:inheritance}.  Because \lstinline{Panda::Feed} is a virtual function, we must draw an edge from \lstinline{feedPanda} to every instance of \lstinline{Feed}.}
+    \caption{Call graph for Figure \ref{lst:rules:inheritance}.  Because \lstinline{Panda::Feed} is a virtual function, we must draw an edge from \lstinline{feedPanda} to every instance of \lstinline{Feed}.}
     \label{fig:rules:inheritance}
 \end{figure}
 
@@ -64,37 +66,39 @@ For this example we will continue to assume that there is a rule restricting ind
 
 \subsection{Overriding Methods with Annotations}
 
-Just like with the standard C++17 type qualifiers, if a virtual function $T.M$ is overridden by $S.M$, then the qualified types of $T.M$ and $S.M$ must match exactly.  Listing~\ref{lst:rules:bad_override} contains an example of an override that is invalid according to the C++17 standard.  In this example, \lstinline{Panda::Feed} has a \lstinline{const} qualifier, but \lstinline{RedPanda::Feed} does not.  As such, the two functions have different types and the compiler will generate an error.  
+Just like with the standard C++17 type qualifiers, if a virtual function $T.M$ is overridden by $S.M$, then the qualified types of $T.M$ and $S.M$ must match exactly.  Figure~\ref{lst:rules:bad_override} contains an example of an override that is invalid according to the C++17 standard.  In this example, \lstinline{Panda::Feed} has a \lstinline{const} qualifier, but \lstinline{RedPanda::Feed} does not.  As such, the two functions have different types and the compiler will generate an error.  
 
-\noindent\begin{minipage}[t]{\linewidth}
-\begin{lstlisting}[language=C++,caption={Example C++ containing an error.  \lstinline{Panda::Feed} and \lstinline{RedPanda::Feed} have different types and so the override is invalid.},label={lst:rules:bad_override}]
-class Panda {
-public:
-	virtual void Feed() const;
-};
+\begin{figure}
+    \begin{lstlisting}[language=C++,gobble=8]
+        class Panda {
+        public:
+            virtual void Feed() const;
+        };
 
-class RedPanda: public Panda {
-	virtual void Feed() override;
-};
-\end{lstlisting}
-\end{minipage}
+        class RedPanda: public Panda {
+            virtual void Feed() override;
+        };
+    \end{lstlisting}
+    \caption{Example C++ containing an error.  \lstinline{Panda::Feed} and \lstinline{RedPanda::Feed} have different types and so the override is invalid.}
+    \label{lst:rules:bad_override}
+\end{figure}
 
-Funqual treats funqual direct type in the same way.  For $T.M$ to be overridden by $S.M$, the two functions must have the same direct type.  If they do not, funqual will display an error.  The Listing~\ref{lst:rules:bad_override_qtag} shows a similar example of an invalid override but where the direct type is the type in conflict.
+Funqual treats funqual direct type in the same way.  For $T.M$ to be overridden by $S.M$, the two functions must have the same direct type.  If they do not, funqual will display an error.  The Figure~\ref{lst:rules:bad_override_qtag} shows a similar example of an invalid override but where the direct type is the type in conflict.
 
-\noindent\begin{minipage}[t]{\linewidth}
-\begin{lstlisting}[language=C++,
-	caption={Example C++ containing a funqual type error.  \lstinline{Panda::Feed} and \lstinline{RedPanda::Feed} have different types and so the override is invalid.},
-    label={lst:rules:bad_override_qtag}]
-class Panda {
-public:
-	virtual void Feed() QTAG(static_memory);
-};
+\begin{figure}
+    \begin{lstlisting}[language=C++,gobble=8]
+        class Panda {
+        public:
+            virtual void Feed() QTAG(static_memory);
+        };
 
-class RedPanda: public Panda {
-	virtual void Feed() override;
-};
-\end{lstlisting}
-\end{minipage}
+        class RedPanda: public Panda {
+            virtual void Feed() override;
+        };
+    \end{lstlisting}
+    \caption{Example C++ containing a funqual type error.  \lstinline{Panda::Feed} and \lstinline{RedPanda::Feed} have different types and so the override is invalid.}
+    \label{lst:rules:bad_override_qtag}
+\end{figure}
 
 \subsection{Operator Overloading}
 

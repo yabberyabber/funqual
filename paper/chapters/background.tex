@@ -16,35 +16,37 @@ The focus of this paper is on creating and analyzing type qualifiers for functio
 
 A program's call graph is a directed graph where each function is a vertex and where each call is an edge directed from the caller to the callee.  The type qualifiers in this context are applied to the vertices and the things we wish to constrain are connections between vertices.  Below is an example of a C program and its associated call graph.
 
-\noindent\begin{minipage}[c]{0.95\textwidth}
-\begin{lstlisting}[language=C,caption={Example C program.  The call graph for this program is shown in Figure \ref{fig:pandacallgraph}},label={lst:pandasource}]
-int breed_and_release_pandas() {
-    Panda *baby_panda = malloc(sizeof(Panda));
-    release_panda(baby_panda);
-}
+\begin{figure}
+    \begin{lstlisting}[language=C,gobble=8]
+        int breed_and_release_pandas() {
+            Panda *baby_panda = malloc(sizeof(Panda));
+            release_panda(baby_panda);
+        }
 
-int save_the_pandas() {
-	stop_deforestation());
-	if (pandas_are_saved()) {
-		printf("Stopping deforestation saved the pandas!\n");
-		return 1;
-	}
+        int save_the_pandas() {
+            stop_deforestation());
+            if (pandas_are_saved()) {
+                printf("Stopping deforestation saved the pandas!\n");
+                return 1;
+            }
 
-	breed_and_release_pandas();
-	if (pandas_are_saved()) {
-		printf("Breeding pandas in captivation and releasing them has saved the pandas!\n");
-		return 1;
-	}
-	return 0;
-}
+            breed_and_release_pandas();
+            if (pandas_are_saved()) {
+                printf("Breeding pandas in captivation and releasing them has saved the pandas!\n");
+                return 1;
+            }
+            return 0;
+        }
 
-int main(void) {
-	if (save_the_pandas()) {
-		printf("The pandas have been saved!\n");
-	}
-}
-\end{lstlisting}
-\end{minipage}
+        int main(void) {
+            if (save_the_pandas()) {
+                printf("The pandas have been saved!\n");
+            }
+        }
+    \end{lstlisting}
+    \caption{Example C program.  The call graph for this program is shown in Figure \ref{fig:pandacallgraph}}
+    \label{lst:pandasource}
+\end{figure}
 
 \input{figures/panda-call-graph}
 

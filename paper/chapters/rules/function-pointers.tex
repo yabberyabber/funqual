@@ -2,42 +2,44 @@
 
 Traversing a program for function calls and adding them to the call graph is relatively straightforward.  Knowing exactly what function is being called at the time of parsing makes this process trivial.  This does not account for all function calls, however.  There are multiple cases in modern C++ where a function call is either happening behind the scenes or where the exact callee is not knowable.  This section examines function pointers and explains how they are represented in the call graph.  
 
-As a concrete example, refer to Listing \ref{lst:rules:ptreg}.  In this example, it is literally impossible to know which function \lstinline{strat} is going to point to.  This is a pointed example, but \lstinline{rand} can represent any expression whose result is unknowable during static analysis.  Additionally, in this example there are very clearly only three functions that \lstinline{strat} could point to.  In a real program, there might be thousands of functions and they might not all be listed in one place.  
+As a concrete example, refer to Figure \ref{lst:rules:ptreg}.  In this example, it is literally impossible to know which function \lstinline{strat} is going to point to.  This is a pointed example, but \lstinline{rand} can represent any expression whose result is unknowable during static analysis.  Additionally, in this example there are very clearly only three functions that \lstinline{strat} could point to.  In a real program, there might be thousands of functions and they might not all be listed in one place.  
 
-\noindent\begin{minipage}[t]{\linewidth}
-\begin{lstlisting}[language=C,caption={In this example C program, it is impossible to know statically what the value of \lstinline{strat} is.  Because of this, funqual requires the programmer to annotate function pointers with additional type information. },label={lst:rules:ptreg}]
-int breed_and_release_pandas() {
-    Panda *baby_panda = malloc(sizeof(Panda));
-    return release_panda(baby_panda);
-}
+\begin{figure}
+    \begin{lstlisting}[language=C,gobble=8]
+        int breed_and_release_pandas() {
+            Panda *baby_panda = malloc(sizeof(Panda));
+            return release_panda(baby_panda);
+        }
 
-int (*)() get_random_strategy() {
-    switch (rand() % 3) {
-        case 0:
-            return breed_and_release_pandas;
-            break;
-        case 1:
-            return stop_deforestation;
-            break;
-        case 2:
-            return stop_hunting;
-            break;
-    }
-}
+        int (*)() get_random_strategy() {
+            switch (rand() % 3) {
+                case 0:
+                    return breed_and_release_pandas;
+                    break;
+                case 1:
+                    return stop_deforestation;
+                    break;
+                case 2:
+                    return stop_hunting;
+                    break;
+            }
+        }
 
-int save_the_pandas() {
-    while (!pandas_are_saved()) {
-        int (*strat)() = get_random_strategy()
-        strat();
-    }
-    return 0;
-}
+        int save_the_pandas() {
+            while (!pandas_are_saved()) {
+                int (*strat)() = get_random_strategy()
+                strat();
+            }
+            return 0;
+        }
 
-int main(void) {
-    return save_the_pandas();
-}
-\end{lstlisting}
-\end{minipage}
+        int main(void) {
+            return save_the_pandas();
+        }
+    \end{lstlisting}
+    \caption{In this example C program, it is impossible to know statically what the value of \lstinline{strat} is.  Because of this, funqual requires the programmer to annotate function pointers with additional type information. }
+    \label{lst:rules:ptreg}
+\end{figure}
 
 \begin{sloppypar}
 If we still intend to use funqual to enforce this $restrict\_indirect\_call(\allowbreak static\_memory, dynamic\_memory)$ rule then we are going to need some additional tools.  Since keeping track of all the possible values of \lstinline{strat} is impractical, we will instead keep track of the type of \lstinline{strat} with respect to this call graph.  Recall that the type of \lstinline{save_the_pandas} is \lstinline{static_memory} and that the type of \lstinline{malloc} is \lstinline{dynamic_memory}.  If we had a function pointer pointing to \lstinline{malloc}, then the type of that function pointer would have to also be \lstinline{dynamic_memory}.  In this example we have a function pointer pointing to \lstinline{breed_and_release_pandas}.  We will say that \lstinline{breed_and_release_pandas} has \textit{indirect type} \lstinline{dynamic_memory} because it calls \lstline{malloc} and so any function pointer that points to \lstinline{breed_and_release_pandas} must have indirect type \lstinline{dynamic_memory}.
@@ -45,43 +47,45 @@ If we still intend to use funqual to enforce this $restrict\_indirect\_call(\all
 
 For this reason, when we use function pointers we will have two kinds of type qualifiers:  \textit{direct type} qualifiers and \textit{indirect type} qualifiers.  Direct type refers to the funqual type qualifiers we have explicitly assigned to the pointee.  Indirect type refers to the funqual type qualifiers of all the functions reachable from the pointee.  Direct type for both functions and function pointers must be explicitly annotated in the code.  Indirect types for function pointers must be annotated explicitly but indirect types for functions can be inferred. 
 
-Listing \ref{lst:rules:pandaptrannote} shows the same code as Listing \ref{lst:rules:ptreg} but with function types annotated.  Figure \ref{fig:rules:pandaptrannote} shows the call graph for Listing \ref{lst:rules:pandaptrannote} with the function pointer represented as a cloud.  Notice that we do not need to write any explicit annotations for the indirect type of \lstinline{breed_and_release_pandas}.  Funqual has all the information it needs to statically infer the indirect type of functions.  In this case, the indirect type is \lstinline{dynamic_memory} because \lstinline{breed_and_release_pandas} calls \lstinline{malloc}.  Also notice that \lstinline{strat} has indirect type \lstinline{dynamic_memory}.  This matters because it is \textit{possible} that calling \lstinline{strat} might result in a \lstinline{dynamic_memory} function getting called.  
+Figure \ref{lst:rules:pandaptrannote} shows the same code as Figure \ref{lst:rules:ptreg} but with function types annotated.  Figure \ref{fig:rules:pandaptrannote} shows the call graph for Figure \ref{lst:rules:pandaptrannote} with the function pointer represented as a cloud.  Notice that we do not need to write any explicit annotations for the indirect type of \lstinline{breed_and_release_pandas}.  Funqual has all the information it needs to statically infer the indirect type of functions.  In this case, the indirect type is \lstinline{dynamic_memory} because \lstinline{breed_and_release_pandas} calls \lstinline{malloc}.  Also notice that \lstinline{strat} has indirect type \lstinline{dynamic_memory}.  This matters because it is \textit{possible} that calling \lstinline{strat} might result in a \lstinline{dynamic_memory} function getting called.  
 
-\noindent\begin{minipage}[t]{\linewidth}
-\begin{lstlisting}[language=C,caption={Same example program as Listing \ref{lst:rules:ptreg} but with function pointer type annotations inserted},label={lst:rules:pandaptrannote}]
-int breed_and_release_pandas() {
-    Panda *baby_panda = malloc(sizeof(Panda));
-    return release_panda(baby_panda);
-}
+\begin{figure}
+    \begin{lstlisting}[language=C,gobble=8]
+        int breed_and_release_pandas() {
+            Panda *baby_panda = malloc(sizeof(Panda));
+            return release_panda(baby_panda);
+        }
 
-int indirect_dynamic_memory (*)() get_random_strategy() {
-    switch (rand() % 3) {
-        case 0:
-            return breed_and_release_pandas;
-            break;
-        case 1:
-            return stop_deforestation;
-            break;
-        case 2:
-            return stop_hunting;
-            break;
-    }
-}
+        int indirect_dynamic_memory (*)() get_random_strategy() {
+            switch (rand() % 3) {
+                case 0:
+                    return breed_and_release_pandas;
+                    break;
+                case 1:
+                    return stop_deforestation;
+                    break;
+                case 2:
+                    return stop_hunting;
+                    break;
+            }
+        }
 
-int save_the_pandas() static_memory {
-    while (!pandas_are_saved()) {
-        int indirect_dynamic_memory (*strat)() =
-            get_random_strategy()
-        strat();
-    }
-    return 0;
-}
+        int save_the_pandas() static_memory {
+            while (!pandas_are_saved()) {
+                int indirect_dynamic_memory (*strat)() =
+                    get_random_strategy()
+                strat();
+            }
+            return 0;
+        }
 
-int main(void) {
-    return save_the_pandas();
-}
-\end{lstlisting}
-\end{minipage}
+        int main(void) {
+            return save_the_pandas();
+        }
+    \end{lstlisting}
+    \caption{Same example program as Figure \ref{lst:rules:ptreg} but with function pointer type annotations inserted}
+    \label{lst:rules:pandaptrannote}
+\end{figure}
 
 \begin{figure}
     \centering
@@ -109,7 +113,7 @@ int main(void) {
         \draw[edge, -triangle 90, line width=0.5mm] (breedandreleasepandas) to (releasepanda);
         \draw[edge, -triangle 90, line width=0.5mm] (breedandreleasepandas) to (malloc);
     \end{tikzpicture}
-    \caption{Color-coded Call Graph for Listing \ref{lst:rules:pandaptrannote}.  Functions tagged \lstinline{static_memory} are highlighted green and functions tagged \lstinline{dynamic_memory} are highlighted red.  Indirect types are represented as horizontal line patterns on a node.  Clouds represent function pointers.}
+    \caption{Color-coded Call Graph for Figure \ref{lst:rules:pandaptrannote}.  Functions tagged \lstinline{static_memory} are highlighted green and functions tagged \lstinline{dynamic_memory} are highlighted red.  Indirect types are represented as horizontal line patterns on a node.  Clouds represent function pointers.}
     \label{fig:rules:pandaptrannote}
 \end{figure}
 

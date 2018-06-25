@@ -381,9 +381,21 @@
 
 \par
 
-TITLE:  \@title      \par
-AUTHOR: \@author     \par
-DATE SUBMITTED: \@degreemonth~\@degreeyear
+\begin{multicols}{2}
+    TTTTTITLE:
+
+    AUTHOR:
+
+    DATE SUBMITTED:
+
+    \columnbreak
+    \@title
+
+    \@author
+
+    \@degreemonth~\@degreeyear
+
+\end{multicols}
 
 \par
 
@@ -417,12 +429,14 @@ DATE SUBMITTED: \@degreemonth~\@degreeyear
 \par
 \vspace*{0.5in}
 
-\begin{tabular}{lp{3.01in}}
+\begin{tabular}{rp{3.01in}}
 TITLE:  &\@title     \par\\
 AUTHOR: &\@author     \par\\
 DATE SUBMITTED: &\@degreemonth~\@degreeyear  \par\\
 
-\par\\
+\par
+\vspace*{0.5in}\\
+
 
 COMMITTEE CHAIR:  &\begin{minipage}[t]{\columnwidth}\begin{flushleft}\@chair\end{flushleft}\end{minipage}  \par\\\\
 COMMITTEE MEMBER: &\begin{minipage}[t]{\columnwidth}\begin{flushleft}\@othermemberA\end{flushleft}\end{minipage}     \par\\\\
